@@ -1,11 +1,16 @@
-from bottle import request, post, get, default_app
+from bottle import request, post, get, static_file, default_app
 
-MIL_NUMBER = "+46123456789"       # test: pretend this is your mother-in-law
-FALLBACK_NUMBER = "+46733466657"  # your real mobile for now
+MIL_NUMBER = "+46705152223"        # mother-in-law real SIM in E.164
+FALLBACK_NUMBER = "+46733466657   # your / your wife's mobile
 
 @get("/")
 def health():
     return "ok"
+
+@get("/audio/<filename>")
+def audio(filename):
+    # Serves files from ./audio inside the container
+    return static_file(filename, root="./audio", mimetype="audio/mpeg")
 
 @post("/calls")
 def calls():
@@ -13,7 +18,8 @@ def calls():
 
     if from_number == MIL_NUMBER:
         return {
-            "play": "https://mtup.xyz"  # placeholder until your MP3 is ready
+            "play": "https://calls.mtup.xyz/audio/calm-message.mp3"
+            # no "next" → call ends after playback
         }
 
     return {
@@ -21,4 +27,3 @@ def calls():
     }
 
 app = default_app()
-
