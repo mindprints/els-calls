@@ -3,7 +3,7 @@ from bottle import Bottle, request, static_file
 app = Bottle()
 
 # TODO: set these to real numbers in E.164 format
-MIL_NUMBER = "+46123456789"        # mother-in-law test number
+MIL_NUMBER = "+46705152223"        # mother-in-law test number
 FALLBACK_NUMBER = "+46733466657"   # your mobile
 
 @app.get("/")
