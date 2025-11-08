@@ -18,7 +18,7 @@ def calls():
 
     if from_number == MIL_NUMBER:
         return {
-            "play": "https://calls.mtup.xyz/audio/calm-message.mp3"
+            "play": "https://calls.mtup.xyz/audio/Aha-remix.mp3"
             # no "next" → call ends after playback
         }
 
