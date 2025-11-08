@@ -1,8 +1,8 @@
 from bottle import request, post, default_app
 
 # Hard-code first. Later: use env vars if you like.
-MIL_NUMBER = "+46xxxxxxxxx"       # mother-in-law SIM
-FALLBACK_NUMBER = "+46yyyyyyyyy"  # your/your wife's mobile
+MIL_NUMBER = "+46123456789""       # mother-in-law SIM
+FALLBACK_NUMBER = "+461111111111"  # your/your wife's mobile
 
 @post("/calls")
 def calls():
