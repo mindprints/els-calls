@@ -1,29 +1,30 @@
-from bottle import request, post, get, static_file, default_app
+from bottle import Bottle, request, static_file
 
-MIL_NUMBER = "+46705152223"        # mother-in-law real SIM in E.164
-FALLBACK_NUMBER = "+46733466657   # your / your wife's mobile
+app = Bottle()
 
-@get("/")
+# TODO: set these to real numbers in E.164 format
+MIL_NUMBER = "+46123456789"        # mother-in-law test number
+FALLBACK_NUMBER = "+46733466657"   # your mobile
+
+@app.get("/")
 def health():
     return "ok"
 
-@get("/audio/<filename>")
-def audio(filename):
-    # Serves files from ./audio inside the container
-    return static_file(filename, root="./audio", mimetype="audio/mpeg")
+@app.get("/audio/<filename>")
+def serve_audio(filename: str):
+    # WORKDIR in Dockerfile is /app, so this is correct
+    return static_file(filename, root="/app/audio", mimetype="audio/mpeg")
 
-@post("/calls")
+@app.post("/calls")
 def calls():
     from_number = (request.forms.get("from") or "").replace(" ", "")
 
     if from_number == MIL_NUMBER:
+        # exact filename, case-sensitive
         return {
             "play": "https://calls.mtup.xyz/audio/Aha-remix.mp3"
-            # no "next" → call ends after playback
         }
 
     return {
         "connect": FALLBACK_NUMBER
     }
-
-app = default_app()
