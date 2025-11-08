@@ -2,7 +2,7 @@ from bottle import Bottle, request, static_file
 
 app = Bottle()
 
-MIL_NUMBER = "+46123456789"        # test MIL
+MIL_NUMBER = "+46705152223"        # test MIL
 FALLBACK_NUMBER = "+46733466657"   # your mobile
 
 @app.get("/")
