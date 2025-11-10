@@ -19,34 +19,102 @@
                 name="fallback_number"
             /><br /><br />
 
+            <br />
+            <h3>Select Active Audio</h3>
+            <div id="audio-list">
+                <p>Loading audio files...</p>
+            </div>
+            <br />
+
             <button type="submit">Save Settings</button>
+        </form>
+
+        <hr />
+
+        <h3>Upload New Audio</h3>
+        <form id="upload-form" enctype="multipart/form-data">
+            <label for="audio_file">Audio file (MP3 only):</label><br />
+            <input
+                type="file"
+                id="audio_file"
+                name="audio_file"
+                accept="audio/mpeg"
+            /><br /><br />
+            <button type="submit">Upload</button>
         </form>
 
         <script>
             window.addEventListener("DOMContentLoaded", () => {
-                const form = document.getElementById("settings-form");
+                const settingsForm = document.getElementById("settings-form");
                 const milNumberInput = document.getElementById("mil_number");
                 const fallbackNumberInput =
                     document.getElementById("fallback_number");
+                const audioListDiv = document.getElementById("audio-list");
+                const uploadForm = document.getElementById("upload-form");
+                const audioFileInput = document.getElementById("audio_file");
 
-                // Load initial settings
-                fetch("/settings")
-                    .then((response) => response.json())
-                    .then((data) => {
-                        milNumberInput.value = data.MIL_NUMBER;
-                        fallbackNumberInput.value = data.FALLBACK_NUMBER;
-                    })
-                    .catch((error) =>
-                        console.error("Error loading settings:", error),
-                    );
+                function loadAudioFilesAndSettings() {
+                    Promise.all([
+                        fetch("/settings").then((res) => res.json()),
+                        fetch("/audio_files").then((res) => res.json()),
+                    ])
+                        .then(([settings, files]) => {
+                            // Populate settings form
+                            milNumberInput.value = settings.MIL_NUMBER;
+                            fallbackNumberInput.value =
+                                settings.FALLBACK_NUMBER;
 
-                // Handle form submission
-                form.addEventListener("submit", (event) => {
+                            // Populate audio list
+                            audioListDiv.innerHTML = "";
+                            if (!files || files.length === 0) {
+                                audioListDiv.innerHTML =
+                                    "<p>No audio files uploaded.</p>";
+                                return;
+                            }
+
+                            files.forEach((file) => {
+                                const radioId = `audio-radio-${file}`;
+                                const radio = document.createElement("input");
+                                radio.type = "radio";
+                                radio.name = "active_audio";
+                                radio.id = radioId;
+                                radio.value = file;
+                                if (file === settings.ACTIVE_AUDIO_FILE) {
+                                    radio.checked = true;
+                                }
+
+                                const label = document.createElement("label");
+                                label.htmlFor = radioId;
+                                label.textContent = ` ${file}`;
+
+                                const br = document.createElement("br");
+
+                                audioListDiv.appendChild(radio);
+                                audioListDiv.appendChild(label);
+                                audioListDiv.appendChild(br);
+                            });
+                        })
+                        .catch((error) => {
+                            console.error("Error loading data:", error);
+                            audioListDiv.innerHTML =
+                                "<p>Error loading data.</p>";
+                        });
+                }
+
+                // Handle settings form submission
+                settingsForm.addEventListener("submit", (event) => {
                     event.preventDefault();
+
+                    const selectedAudio = document.querySelector(
+                        'input[name="active_audio"]:checked',
+                    );
 
                     const newData = {
                         MIL_NUMBER: milNumberInput.value,
                         FALLBACK_NUMBER: fallbackNumberInput.value,
+                        ACTIVE_AUDIO_FILE: selectedAudio
+                            ? selectedAudio.value
+                            : null,
                     };
 
                     fetch("/settings", {
@@ -69,6 +137,41 @@
                             alert("Error saving settings.");
                         });
                 });
+
+                // Handle upload form submission
+                uploadForm.addEventListener("submit", (event) => {
+                    event.preventDefault();
+                    if (
+                        !audioFileInput.files ||
+                        audioFileInput.files.length === 0
+                    ) {
+                        alert("Please select a file to upload.");
+                        return;
+                    }
+                    const formData = new FormData(uploadForm);
+
+                    fetch("/upload_audio", {
+                        method: "POST",
+                        body: formData,
+                    })
+                        .then((response) => response.json())
+                        .then((data) => {
+                            if (data.status === "success") {
+                                alert("File uploaded successfully!");
+                                uploadForm.reset();
+                                loadAudioFilesAndSettings(); // Refresh file list and settings
+                            } else {
+                                alert("Error uploading file: " + data.message);
+                            }
+                        })
+                        .catch((error) => {
+                            console.error("Error uploading file:", error);
+                            alert("An error occurred during file upload.");
+                        });
+                });
+
+                // Initial load
+                loadAudioFilesAndSettings();
             });
         </script>
     </body>
