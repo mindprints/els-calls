@@ -4,21 +4,22 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Call Settings Dashboard</title>
+        <script src="https://unpkg.com/lamejs@1.2.1/lame.min.js"></script>
         <style>
             body {
-                font-family:
-                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-                    Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue",
-                    sans-serif;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                    Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans",
+                    "Helvetica Neue", sans-serif;
                 margin: 2em;
                 background-color: #f4f4f9;
                 color: #333;
             }
             h1,
-            h3 {
+            h3,
+            h4 {
                 color: #444;
             }
-            form {
+            .section {
                 background: #fff;
                 padding: 1.5em;
                 border-radius: 8px;
@@ -48,6 +49,10 @@
             button:hover {
                 background-color: #45a049;
             }
+            button:disabled {
+                background-color: #ccc;
+                cursor: not-allowed;
+            }
             button.delete {
                 background-color: #f44336;
                 padding: 5px 10px;
@@ -62,22 +67,16 @@
                 background: #ddd;
                 margin: 2em 0;
             }
-            .section {
-                margin-bottom: 2rem;
-            }
-            #schedule-list div {
-                margin-bottom: 0.5rem;
-            }
-            #audio-list .audio-item {
+            .audio-item {
                 display: flex;
                 align-items: center;
                 margin-bottom: 8px;
             }
-            #audio-list .audio-item label {
-                flex-grow: 1; /* Pushes delete button to the right */
+            .audio-item label {
+                flex-grow: 1;
                 margin: 0 8px;
             }
-            #schedule-list .slot {
+            .slot {
                 background-color: #e9eef6;
                 padding: 10px;
                 border-radius: 4px;
@@ -94,28 +93,28 @@
         <!-- General Settings -->
         <div class="section">
             <h3>General Settings</h3>
-            <form id="settings-form">
-                <label for="mil_number">MIL Number:</label><br />
-                <input
-                    type="text"
-                    id="mil_number"
-                    name="mil_number"
-                /><br /><br />
+            <form id="settings-form" onsubmit="return false;">
+                <label for="mil_number">MIL Number:</label>
+                <input type="text" id="mil_number" name="mil_number" />
 
-                <label for="fallback_number">Fallback Number:</label><br />
+                <label for="fallback_number">Fallback Number:</label>
                 <input
                     type="text"
                     id="fallback_number"
                     name="fallback_number"
-                /><br /><br />
+                />
 
-                <label>Default Active Audio (when no schedule matches):</label>
+                <label
+                    >Default Active Audio (when no schedule matches):</label
+                >
                 <div id="audio-list">
                     <p>Loading audio files...</p>
                 </div>
                 <br />
 
-                <button type="submit">Save General Settings</button>
+                <button type="submit" id="save-settings-btn">
+                    Save General Settings
+                </button>
             </form>
         </div>
 
@@ -124,7 +123,7 @@
         <!-- Schedule Manager -->
         <div class="section">
             <h3>Schedule Manager</h3>
-            <form id="schedule-form">
+            <form id="schedule-form" onsubmit="return false;">
                 <label for="schedule_audio_file">Audio File:</label>
                 <select id="schedule_audio_file" required></select>
 
@@ -140,6 +139,41 @@
             <h4>Current Schedule</h4>
             <div id="schedule-list">
                 <p>Loading schedule...</p>
+            </div>
+        </div>
+
+        <hr />
+
+        <!-- Record New Audio -->
+        <div class="section" id="record-section">
+            <h3>Record New Audio</h3>
+            <div id="recorder-ui">
+                <button type-="button" id="start-record-btn">Start Recording</button>
+                <button type-="button" id="stop-record-btn" disabled>Stop Recording</button>
+                <p>
+                    <strong>Status:</strong>
+                    <span id="record-status">Ready</span>
+                </p>
+                <audio
+                    id="preview-player"
+                    controls
+                    style="display: none; margin-top: 1em; width: 100%"
+                ></audio>
+                <div
+                    id="preview-controls"
+                    style="display: none; margin-top: 1em"
+                >
+                    <button type="button" id="save-record-btn">
+                        Save Recording
+                    </button>
+                    <button
+                        type="button"
+                        id="discard-record-btn"
+                        class="delete"
+                    >
+                        Discard
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -162,18 +196,16 @@
 
         <script>
             window.addEventListener("DOMContentLoaded", () => {
-                // Main Form Elements
+                // --- ELEMENT SELECTORS ---
                 const settingsForm = document.getElementById("settings-form");
                 const milNumberInput = document.getElementById("mil_number");
                 const fallbackNumberInput =
                     document.getElementById("fallback_number");
                 const audioListDiv = document.getElementById("audio-list");
 
-                // Upload Form Elements
                 const uploadForm = document.getElementById("upload-form");
                 const audioFileInput = document.getElementById("audio_file");
 
-                // Schedule Form Elements
                 const scheduleForm = document.getElementById("schedule-form");
                 const scheduleAudioFileSelect = document.getElementById(
                     "schedule_audio_file",
@@ -183,8 +215,24 @@
                 const scheduleListDiv =
                     document.getElementById("schedule-list");
 
-                // --- DATA LOADING AND RENDERING ---
+                const recordSection = document.getElementById("record-section");
+                const startRecordBtn =
+                    document.getElementById("start-record-btn");
+                const stopRecordBtn = document.getElementById("stop-record-btn");
+                const recordStatus = document.getElementById("record-status");
+                const previewPlayer = document.getElementById("preview-player");
+                const previewControls =
+                    document.getElementById("preview-controls");
+                const saveRecordBtn = document.getElementById("save-record-btn");
+                const discardRecordBtn =
+                    document.getElementById("discard-record-btn");
 
+                // --- STATE VARIABLES ---
+                let mediaRecorder;
+                let audioChunks = [];
+                let audioBlob;
+
+                // --- DATA LOADING & RENDERING ---
                 function loadData() {
                     Promise.all([
                         fetch("/settings").then((res) => res.json()),
@@ -196,7 +244,7 @@
                             renderSchedule(settings.SCHEDULE || []);
                         })
                         .catch((error) => {
-                            console.error("Error loading data:", error);
+                            console.error("Error loading initial data:", error);
                             alert("Error loading initial data.");
                         });
                 }
@@ -211,8 +259,8 @@
                         return;
                     }
 
-                    // For default audio selection (radio buttons)
                     files.forEach((file) => {
+                        // For default audio selection (radio buttons with delete)
                         const itemDiv = document.createElement("div");
                         itemDiv.className = "audio-item";
 
@@ -232,18 +280,15 @@
                         const deleteBtn = document.createElement("button");
                         deleteBtn.textContent = "Delete";
                         deleteBtn.className = "delete audio-delete";
-                        deleteBtn.type = "button"; // Prevent form submission
+                        deleteBtn.type = "button";
                         deleteBtn.dataset.filename = file;
 
                         itemDiv.appendChild(radio);
                         itemDiv.appendChild(label);
                         itemDiv.appendChild(deleteBtn);
-
                         audioListDiv.appendChild(itemDiv);
-                    });
 
-                    // For schedule form (dropdown)
-                    files.forEach((file) => {
+                        // For schedule form (dropdown)
                         const option = document.createElement("option");
                         option.value = file;
                         option.textContent = file;
@@ -263,188 +308,141 @@
                             "<p>No scheduled items.</p>";
                         return;
                     }
-
                     schedule.forEach((slot, index) => {
                         const slotDiv = document.createElement("div");
                         slotDiv.className = "slot";
-
                         const text = document.createElement("span");
                         text.textContent = `Play "${slot.audio_file}" from ${slot.start_time} to ${slot.end_time}`;
-
                         const deleteBtn = document.createElement("button");
                         deleteBtn.textContent = "Delete";
                         deleteBtn.className = "delete";
-                        deleteBtn.dataset.index = index; // Store index for deletion
-
+                        deleteBtn.dataset.index = index;
                         slotDiv.appendChild(text);
                         slotDiv.appendChild(deleteBtn);
                         scheduleListDiv.appendChild(slotDiv);
                     });
                 }
 
-                // --- EVENT LISTENERS ---
-
-                // Handle deleting an audio file (using event delegation on the list)
-                audioListDiv.addEventListener("click", (event) => {
-                    const target = event.target;
-                    if (target.classList.contains("audio-delete")) {
-                        const filename = target.dataset.filename;
-                        if (
-                            !confirm(
-                                `Are you sure you want to delete \"${filename}\"?`,
-                            )
-                        ) {
-                            return;
-                        }
-
-                        fetch(`/audio/${filename}`, { method: "DELETE" })
-                            .then((res) => res.json())
-                            .then((data) => {
-                                if (data.status === "success") {
-                                    alert(data.message);
-                                    loadData(); // Reload all data
-                                } else {
-                                    alert(`Error: ${data.message}`);
-                                }
-                            })
-                            .catch((error) => {
-                                console.error(
-                                    "Error deleting audio file:",
-                                    error,
-                                );
-                                alert(
-                                    "An error occurred while trying to delete the file.",
-                                );
-                            });
-                    }
-                });
-
-                // Handle general settings form submission
-                settingsForm.addEventListener("submit", (event) => {
-                    event.preventDefault();
-                    const selectedAudio = document.querySelector(
-                        'input[name="active_audio"]:checked',
-                    );
-                    const newData = {
-                        MIL_NUMBER: milNumberInput.value,
-                        FALLBACK_NUMBER: fallbackNumberInput.value,
-                        ACTIVE_AUDIO_FILE: selectedAudio
-                            ? selectedAudio.value
-                            : null,
-                    };
-
-                    fetch("/settings", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(newData),
-                    })
-                        .then((res) => res.json())
-                        .then((data) => {
-                            if (data.status === "success") {
-                                alert("Settings saved successfully!");
-                                loadData();
-                            } else {
-                                alert("Error saving settings: " + data.message);
-                            }
-                        })
-                        .catch((error) => {
-                            console.error("Error saving settings:", error);
-                            alert("Error saving settings.");
-                        });
-                });
-
-                // Handle schedule form submission
-                scheduleForm.addEventListener("submit", (event) => {
-                    event.preventDefault();
-                    const newSlot = {
-                        audio_file: scheduleAudioFileSelect.value,
-                        start_time: startTimeInput.value,
-                        end_time: endTimeInput.value,
-                    };
-
-                    fetch("/schedule", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(newSlot),
-                    })
-                        .then((res) => res.json())
-                        .then((data) => {
-                            if (data.status === "success") {
-                                alert("Schedule updated!");
-                                renderSchedule(data.schedule);
-                                scheduleForm.reset();
-                            } else {
-                                alert(
-                                    "Error updating schedule: " + data.message,
-                                );
-                            }
-                        })
-                        .catch((error) => {
-                            console.error("Error updating schedule:", error);
-                            alert("Error updating schedule.");
-                        });
-                });
-
-                // Handle deleting a schedule item (using event delegation)
-                scheduleListDiv.addEventListener("click", (event) => {
-                    if (event.target.classList.contains("delete")) {
-                        const index = event.target.dataset.index;
-                        if (
-                            !confirm(
-                                "Are you sure you want to delete this schedule item?",
-                            )
-                        ) {
-                            return;
-                        }
-
-                        fetch(`/schedule/${index}`, { method: "DELETE" })
-                            .then((res) => res.json())
-                            .then((data) => {
-                                if (data.status === "success") {
-                                    alert("Schedule item deleted.");
-                                    renderSchedule(data.schedule);
-                                } else {
-                                    alert(
-                                        "Error deleting item: " + data.message,
-                                    );
-                                }
-                            })
-                            .catch((error) => {
-                                console.error("Error deleting item:", error);
-                                alert("Error deleting item.");
-                            });
-                    }
-                });
-
-                // Handle upload form submission
-                uploadForm.addEventListener("submit", (event) => {
-                    event.preventDefault();
-                    if (!audioFileInput.files.length) {
-                        alert("Please select a file to upload.");
+                // --- RECORDER LOGIC ---
+                function initializeRecorder() {
+                    if (
+                        !navigator.mediaDevices ||
+                        !navigator.mediaDevices.getUserMedia
+                    ) {
+                        recordSection.innerHTML =
+                            '<h3>Recording not supported</h3><p>Direct audio recording is not available on this browser (it requires HTTPS and a modern browser).</p>';
                         return;
                     }
-                    const formData = new FormData(uploadForm);
+                    startRecordBtn.addEventListener("click", startRecording);
+                    stopRecordBtn.addEventListener("click", stopRecording);
+                    saveRecordBtn.addEventListener("click", saveRecording);
+                    discardRecordBtn.addEventListener(
+                        "click",
+                        resetRecordingState,
+                    );
+                    resetRecordingState();
+                }
 
-                    fetch("/upload_audio", { method: "POST", body: formData })
-                        .then((res) => res.json())
-                        .then((data) => {
-                            if (data.status === "success") {
-                                alert("File uploaded successfully!");
-                                uploadForm.reset();
-                                loadData(); // Refresh all data to show new file
-                            } else {
-                                alert("Error uploading file: " + data.message);
-                            }
+                function resetRecordingState() {
+                    startRecordBtn.disabled = false;
+                    stopRecordBtn.disabled = true;
+                    saveRecordBtn.disabled = true;
+                    discardRecordBtn.disabled = true;
+                    recordStatus.textContent = "Ready";
+                    previewPlayer.style.display = "none";
+                    previewControls.style.display = "none";
+                    if (previewPlayer.src) {
+                        URL.revokeObjectURL(previewPlayer.src);
+                    }
+                    previewPlayer.removeAttribute("src");
+                    audioChunks = [];
+                    audioBlob = null;
+                }
+
+                function startRecording() {
+                    navigator.mediaDevices
+                        .getUserMedia({ audio: true })
+                        .then((stream) => {
+                            mediaRecorder = new MediaRecorder(stream);
+                            mediaRecorder.ondataavailable = (event) => {
+                                audioChunks.push(event.data);
+                            };
+                            mediaRecorder.onstop = () => {
+                                audioBlob = new Blob(audioChunks, {
+                                    type: "audio/wav",
+                                });
+                                const audioUrl =
+                                    URL.createObjectURL(audioBlob);
+                                previewPlayer.src = audioUrl;
+                                previewPlayer.style.display = "block";
+                                previewControls.style.display = "block";
+                                saveRecordBtn.disabled = false;
+                                discardRecordBtn.disabled = false;
+                                recordStatus.textContent = "Preview Ready";
+                            };
+                            startRecordBtn.disabled = true;
+                            stopRecordBtn.disabled = false;
+                            recordStatus.textContent = "Recording...";
+                            mediaRecorder.start();
                         })
-                        .catch((error) => {
-                            console.error("Error uploading file:", error);
-                            alert("An error occurred during file upload.");
+                        .catch((err) => {
+                            console.error("Error accessing microphone:", err);
+                            alert(
+                                "Could not access microphone. Please check browser permissions.",
+                            );
                         });
-                });
+                }
 
-                // Initial load
-                loadData();
-            });
-        </script>
-    </body>
-</html>
+                function stopRecording() {
+                    mediaRecorder.stop();
+                    mediaRecorder.stream
+                        .getTracks()
+                        .forEach((track) => track.stop()); // Release microphone
+                    stopRecordBtn.disabled = true;
+                }
+
+                function saveRecording() {
+                    const filename = prompt(
+                        "Please enter a filename for your recording (without extension):",
+                    );
+                    if (filename && filename.trim()) {
+                        encodeAndUpload(audioBlob, `${filename.trim()}.mp3`);
+                    } else if (filename !== null) {
+                        alert("Filename cannot be empty.");
+                    }
+                }
+
+                function encodeAndUpload(blob, filename) {
+                    recordStatus.textContent = "Encoding to MP3...";
+                    saveRecordBtn.disabled = true;
+                    discardRecordBtn.disabled = true;
+
+                    const reader = new FileReader();
+                    reader.onload = function (event) {
+                        const audioContext = new (window.AudioContext ||
+                            window.webkitAudioContext)();
+                        audioContext
+                            .decodeAudioData(event.target.result)
+                            .then((buffer) => {
+                                const mp3encoder = new lamejs.Mp3Encoder(
+                                    1,
+                                    buffer.sampleRate,
+                                    128,
+                                );
+                                const samples = buffer.getChannelData(0);
+                                const mp3Data = [];
+                                const sampleBlockSize = 1152;
+
+                                for (
+                                    let i = 0;
+                                    i < samples.length;
+                                    i += sampleBlockSize
+                                ) {
+                                    const sampleChunk = samples.subarray(
+                                        i,
+                                        i + sampleBlockSize,
+                                    );
+                                    const mp3buf =
+                                        mp3encoder.encodeBuffer(sampleChunk);
+                                    if (mp3buf.length > 0) {
+                                        mp3

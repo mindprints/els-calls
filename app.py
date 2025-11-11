@@ -70,6 +70,12 @@ def index():
     return static_file("index.html", root="/app")
 
 
+@app.get("/wip")
+def wip_index():
+    """Serve the work-in-progress HTML file."""
+    return static_file("index_wip.html", root="/app")
+
+
 @app.get("/audio/<filename>")
 def serve_audio(filename: str):
     return static_file(filename, root=AUDIO_DIR, mimetype="audio/mpeg")
