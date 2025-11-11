@@ -156,12 +156,40 @@ def add_schedule_entry():
             "message": "Scheduled audio file does not exist.",
         }, 400
 
-    # Validate time format (HH:MM)
+    # Validate time format (HH:MM) and check for conflicts
     try:
-        time.fromisoformat(data["start_time"])
-        time.fromisoformat(data["end_time"])
+        new_start_t = time.fromisoformat(data["start_time"])
+        new_end_t = time.fromisoformat(data["end_time"])
     except ValueError:
         return {"status": "error", "message": "Invalid time format. Use HH:MM."}, 400
+
+    if new_start_t == new_end_t:
+        return {
+            "status": "error",
+            "message": "Start and end times cannot be the same.",
+        }, 400
+
+    def get_ranges(start, end):
+        if start < end:
+            return [(start, end)]
+        else:  # overnight
+            return [(start, time.max), (time.min, end)]
+
+    new_ranges = get_ranges(new_start_t, new_end_t)
+
+    for existing_slot in settings.get("SCHEDULE", []):
+        existing_start_t = time.fromisoformat(existing_slot["start_time"])
+        existing_end_t = time.fromisoformat(existing_slot["end_time"])
+        existing_ranges = get_ranges(existing_start_t, existing_end_t)
+
+        for r1_start, r1_end in new_ranges:
+            for r2_start, r2_end in existing_ranges:
+                # Standard interval overlap check
+                if r1_start < r2_end and r2_start < r1_end:
+                    return {
+                        "status": "error",
+                        "message": f"Schedule conflict with existing slot: {existing_slot['audio_file']} ({existing_slot['start_time']}-{existing_slot['end_time']}).",
+                    }, 409  # Conflict
 
     new_slot = {
         "audio_file": data["audio_file"],
@@ -238,3 +266,40 @@ def upload_audio():
     except Exception as e:
         print(f"Error saving uploaded file: {e}")
         return {"status": "error", "message": "Failed to save file."}, 500
+
+
+@app.delete("/audio/<filename>")
+def delete_audio_file(filename: str):
+    """Delete an audio file, ensuring it's not in use."""
+    # Basic security: prevent directory traversal.
+    if ".." in filename or "/" in filename:
+        return {"status": "error", "message": "Invalid filename."}, 400
+
+    # Check if the file is set as the default active audio file.
+    if settings.get("ACTIVE_AUDIO_FILE") == filename:
+        return {
+            "status": "error",
+            "message": "Cannot delete file. It is set as the default active audio.",
+        }, 409  # Conflict
+
+    # Check if the file is used in any schedule.
+    for slot in settings.get("SCHEDULE", []):
+        if slot.get("audio_file") == filename:
+            return {
+                "status": "error",
+                "message": f"Cannot delete file. It is used in a schedule ({slot['start_time']} - {slot['end_time']}).",
+            }, 409
+
+    try:
+        file_path = os.path.join(AUDIO_DIR, filename)
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+            return {"status": "success", "message": f"File '{filename}' deleted."}
+        else:
+            return {"status": "error", "message": "File not found."}, 404
+    except Exception as e:
+        print(f"Error deleting audio file '{filename}': {e}")
+        return {
+            "status": "error",
+            "message": "Internal server error during deletion.",
+        }, 500

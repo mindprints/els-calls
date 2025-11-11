@@ -65,10 +65,17 @@
             .section {
                 margin-bottom: 2rem;
             }
-            #audio-list label,
             #schedule-list div {
                 margin-bottom: 0.5rem;
-                display: block;
+            }
+            #audio-list .audio-item {
+                display: flex;
+                align-items: center;
+                margin-bottom: 8px;
+            }
+            #audio-list .audio-item label {
+                flex-grow: 1; /* Pushes delete button to the right */
+                margin: 0 8px;
             }
             #schedule-list .slot {
                 background-color: #e9eef6;
@@ -206,23 +213,33 @@
 
                     // For default audio selection (radio buttons)
                     files.forEach((file) => {
-                        const radioId = `audio-radio-${file}`;
+                        const itemDiv = document.createElement("div");
+                        itemDiv.className = "audio-item";
+
                         const radio = document.createElement("input");
                         radio.type = "radio";
                         radio.name = "active_audio";
-                        radio.id = radioId;
+                        radio.id = `audio-radio-${file}`;
                         radio.value = file;
                         if (file === settings.ACTIVE_AUDIO_FILE) {
                             radio.checked = true;
                         }
 
                         const label = document.createElement("label");
-                        label.htmlFor = radioId;
-                        label.textContent = ` ${file}`;
+                        label.htmlFor = `audio-radio-${file}`;
+                        label.textContent = file;
 
-                        audioListDiv.appendChild(radio);
-                        audioListDiv.appendChild(label);
-                        audioListDiv.appendChild(document.createElement("br"));
+                        const deleteBtn = document.createElement("button");
+                        deleteBtn.textContent = "Delete";
+                        deleteBtn.className = "delete audio-delete";
+                        deleteBtn.type = "button"; // Prevent form submission
+                        deleteBtn.dataset.filename = file;
+
+                        itemDiv.appendChild(radio);
+                        itemDiv.appendChild(label);
+                        itemDiv.appendChild(deleteBtn);
+
+                        audioListDiv.appendChild(itemDiv);
                     });
 
                     // For schedule form (dropdown)
@@ -266,6 +283,41 @@
                 }
 
                 // --- EVENT LISTENERS ---
+
+                // Handle deleting an audio file (using event delegation on the list)
+                audioListDiv.addEventListener("click", (event) => {
+                    const target = event.target;
+                    if (target.classList.contains("audio-delete")) {
+                        const filename = target.dataset.filename;
+                        if (
+                            !confirm(
+                                `Are you sure you want to delete \"${filename}\"?`,
+                            )
+                        ) {
+                            return;
+                        }
+
+                        fetch(`/audio/${filename}`, { method: "DELETE" })
+                            .then((res) => res.json())
+                            .then((data) => {
+                                if (data.status === "success") {
+                                    alert(data.message);
+                                    loadData(); // Reload all data
+                                } else {
+                                    alert(`Error: ${data.message}`);
+                                }
+                            })
+                            .catch((error) => {
+                                console.error(
+                                    "Error deleting audio file:",
+                                    error,
+                                );
+                                alert(
+                                    "An error occurred while trying to delete the file.",
+                                );
+                            });
+                    }
+                });
 
                 // Handle general settings form submission
                 settingsForm.addEventListener("submit", (event) => {
