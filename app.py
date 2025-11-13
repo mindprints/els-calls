@@ -1,20 +1,231 @@
 import json
 import os
 import time
-from datetime import datetime, time
+from datetime import datetime
 from pathlib import Path
+from typing import Dict, Optional, Tuple
 
 import requests
 from bottle import Bottle, request, response, static_file
 
-# Import AI conversation module
-from ai_conversation import conversation_manager
-
 app = Bottle()
 
+# --- Embedded AI Conversation Module ---
+
+
+class AIConversation:
+    """Handles the AI conversation pipeline"""
+
+    def __init__(self, audio_dir: str = "audio"):
+        self.audio_dir = Path(audio_dir)
+        self.audio_dir.mkdir(exist_ok=True)
+
+        # API Keys from environment
+        self.soniox_api_key = os.getenv("SONIOX_API_KEY")
+        self.deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
+        self.elevenlabs_api_key = os.getenv("ELEVENLABS_API_KEY")
+
+        # Default settings
+        self.default_voice_id = "5JD3K0SA9QTSxc9tVNpP"
+        self.default_language = "sv"
+        self.max_turns = 3
+
+        # Load settings from file
+        self._load_settings()
+
+    def _load_settings(self):
+        """Load settings from settings.json"""
+        try:
+            with open("settings.json", "r") as f:
+                settings = json.load(f)
+                self.max_turns = settings.get("MAX_TURNS", 3)
+                self.default_language = settings.get("LANG", "sv")
+        except FileNotFoundError:
+            pass
+
+    def speech_to_text(self, audio_url: str) -> Optional[str]:
+        """Convert speech to text using Soniox API"""
+        if not self.soniox_api_key:
+            print("❌ Soniox API key not configured")
+            return None
+
+        try:
+            # Download the audio file
+            response = requests.get(audio_url, timeout=10)
+            response.raise_for_status()
+
+            # Upload to Soniox for transcription
+            soniox_url = "https://api.soniox.com/v1/transcribe_async"
+            headers = {"X-API-KEY": self.soniox_api_key}
+
+            files = {"audio_file": ("audio.wav", response.content, "audio/wav")}
+            data = {"language_code": self.default_language}
+
+            transcribe_response = requests.post(
+                soniox_url, headers=headers, files=files, data=data, timeout=30
+            )
+            transcribe_response.raise_for_status()
+
+            result = transcribe_response.json()
+
+            # Extract text from result
+            if "words" in result:
+                text = " ".join([word["text"] for word in result["words"]])
+                print(f"🎙️  STT Result: {text}")
+                return text
+            else:
+                print("❌ No transcription result from Soniox")
+                return None
+
+        except Exception as e:
+            print(f"❌ STT failed: {e}")
+            return None
+
+    def generate_response(
+        self, user_input: str, conversation_history: list = None
+    ) -> Optional[str]:
+        """Generate AI response using DeepSeek API"""
+        if not self.deepseek_api_key:
+            print("❌ DeepSeek API key not configured")
+            return None
+
+        try:
+            # Build conversation context
+            messages = [
+                {
+                    "role": "system",
+                    "content": """You are a helpful, warm, and reassuring assistant speaking to someone who may have memory challenges.
+Keep responses brief (1-2 sentences), clear, and comforting. Speak in Swedish.
+Focus on being present and supportive rather than solving complex problems.""",
+                }
+            ]
+
+            # Add conversation history if available
+            if conversation_history:
+                for turn in conversation_history:
+                    messages.append({"role": "user", "content": turn["user"]})
+                    messages.append({"role": "assistant", "content": turn["assistant"]})
+
+            # Add current user input
+            messages.append({"role": "user", "content": user_input})
+
+            # Call DeepSeek API
+            deepseek_url = "https://api.deepseek.com/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {self.deepseek_api_key}",
+                "Content-Type": "application/json",
+            }
+
+            payload = {
+                "model": "deepseek-chat",
+                "messages": messages,
+                "max_tokens": 150,
+                "temperature": 0.7,
+            }
+
+            response = requests.post(
+                deepseek_url, headers=headers, json=payload, timeout=30
+            )
+            response.raise_for_status()
+
+            result = response.json()
+            ai_response = result["choices"][0]["message"]["content"]
+
+            print(f"🧠 LLM Response: {ai_response}")
+            return ai_response
+
+        except Exception as e:
+            print(f"❌ LLM generation failed: {e}")
+            return None
+
+    def text_to_speech(
+        self, text: str, call_id: str, turn_number: int
+    ) -> Optional[str]:
+        """Convert text to speech using ElevenLabs"""
+        if not self.elevenlabs_api_key:
+            print("❌ ElevenLabs API key not configured")
+            return None
+
+        try:
+            # Call ElevenLabs API
+            url = f"https://api.elevenlabs.io/v1/text-to-speech/{self.default_voice_id}"
+            headers = {
+                "Accept": "audio/mpeg",
+                "Content-Type": "application/json",
+                "xi-api-key": self.elevenlabs_api_key,
+            }
+
+            data = {
+                "text": text,
+                "model_id": "eleven_multilingual_v2",
+                "voice_settings": {
+                    "stability": 0.5,
+                    "similarity_boost": 0.8,
+                },
+            }
+
+            response = requests.post(url, headers=headers, json=data, timeout=30)
+            response.raise_for_status()
+
+            # Save the audio file
+            filename = f"reply-{call_id}-{turn_number}.mp3"
+            filepath = self.audio_dir / filename
+
+            with open(filepath, "wb") as f:
+                f.write(response.content)
+
+            print(f"🔊 TTS saved: {filename} ({len(response.content)} bytes)")
+            return str(filepath)
+
+        except Exception as e:
+            print(f"❌ TTS generation failed: {e}")
+            return None
+
+    def process_conversation_turn(
+        self,
+        audio_url: str,
+        call_id: str,
+        turn_number: int,
+        conversation_history: list = None,
+    ) -> Tuple[Optional[str], Optional[str]]:
+        """Process a complete conversation turn: STT → LLM → TTS"""
+        start_time = time.time()
+
+        # Step 1: Speech to Text
+        user_text = self.speech_to_text(audio_url)
+        if not user_text:
+            print("❌ STT failed, using fallback")
+            return None, None
+
+        stt_time = time.time() - start_time
+
+        # Step 2: Generate AI Response
+        ai_response = self.generate_response(user_text, conversation_history)
+        if not ai_response:
+            print("❌ LLM failed, using fallback")
+            return None, None
+
+        llm_time = time.time() - start_time - stt_time
+
+        # Step 3: Text to Speech
+        audio_path = self.text_to_speech(ai_response, call_id, turn_number)
+
+        tts_time = time.time() - start_time - stt_time - llm_time
+        total_time = time.time() - start_time
+
+        print(
+            f"⏱️  Timing - STT: {stt_time:.2f}s, LLM: {llm_time:.2f}s, TTS: {tts_time:.2f}s, Total: {total_time:.2f}s"
+        )
+
+        return audio_path, ai_response
+
+
+# Global conversation manager instance
+conversation_manager = AIConversation()
+
 # --- Configuration & Setup ---
-SETTINGS_FILE = "/app/settings.json"
-AUDIO_DIR = "/app/audio"
+SETTINGS_FILE = "settings.json"
+AUDIO_DIR = "audio"
 
 # Global settings dictionary, loaded from file
 try:
@@ -53,8 +264,8 @@ def _get_active_audio():
     # Check for an active scheduled item
     for slot in settings.get("SCHEDULE", []):
         try:
-            start_time = time.fromisoformat(slot["start_time"])
-            end_time = time.fromisoformat(slot["end_time"])
+            start_time = datetime.strptime(slot["start_time"], "%H:%M").time()
+            end_time = datetime.strptime(slot["end_time"], "%H:%M").time()
 
             # Handle overnight schedules (e.g., 22:00 to 02:00)
             if start_time <= end_time:
@@ -91,8 +302,6 @@ def serve_audio(filename: str):
 
 
 # --- AI Conversation Endpoints ---
-
-
 @app.post("/recordings")
 def handle_recording():
     """Process recordings from 46elks and generate AI responses"""
@@ -276,8 +485,8 @@ def add_schedule_entry():
 
     # Validate time format (HH:MM) and check for conflicts
     try:
-        new_start_t = time.fromisoformat(data["start_time"])
-        new_end_t = time.fromisoformat(data["end_time"])
+        new_start_t = datetime.strptime(data["start_time"], "%H:%M").time()
+        new_end_t = datetime.strptime(data["end_time"], "%H:%M").time()
     except ValueError:
         return {"status": "error", "message": "Invalid time format. Use HH:MM."}, 400
 
@@ -296,8 +505,10 @@ def add_schedule_entry():
     new_ranges = get_ranges(new_start_t, new_end_t)
 
     for existing_slot in settings.get("SCHEDULE", []):
-        existing_start_t = time.fromisoformat(existing_slot["start_time"])
-        existing_end_t = time.fromisoformat(existing_slot["end_time"])
+        existing_start_t = datetime.strptime(
+            existing_slot["start_time"], "%H:%M"
+        ).time()
+        existing_end_t = datetime.strptime(existing_slot["end_time"], "%H:%M").time()
         existing_ranges = get_ranges(existing_start_t, existing_end_t)
 
         for r1_start, r1_end in new_ranges:
@@ -421,3 +632,7 @@ def delete_audio_file(filename: str):
             "status": "error",
             "message": "Internal server error during deletion.",
         }, 500
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000, debug=True)
