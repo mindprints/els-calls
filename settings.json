@@ -2,5 +2,8 @@
   "MIL_NUMBER": "+46705152223",
   "FALLBACK_NUMBER": "+46733466657",
   "ACTIVE_AUDIO_FILE": "Aha-remix.mp3",
-  "SCHEDULE": []
+  "SCHEDULE": [],
+  "MAX_TURNS": 3,
+  "LANG": "sv",
+  "AI_REPLIES_ENABLED": true
 }

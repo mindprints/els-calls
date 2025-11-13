@@ -1,8 +1,14 @@
 import json
 import os
+import time
 from datetime import datetime, time
+from pathlib import Path
 
+import requests
 from bottle import Bottle, request, response, static_file
+
+# Import AI conversation module
+from ai_conversation import conversation_manager
 
 app = Bottle()
 
@@ -21,6 +27,9 @@ except FileNotFoundError:
         "FALLBACK_NUMBER": "",
         "ACTIVE_AUDIO_FILE": None,
         "SCHEDULE": [],
+        "MAX_TURNS": 3,
+        "LANG": "sv",
+        "AI_REPLIES_ENABLED": True,
     }
 
 # Ensure SCHEDULE key exists for backward compatibility
@@ -81,27 +90,122 @@ def serve_audio(filename: str):
     return static_file(filename, root=AUDIO_DIR, mimetype="audio/mpeg")
 
 
+# --- AI Conversation Endpoints ---
+
+
+@app.post("/recordings")
+def handle_recording():
+    """Process recordings from 46elks and generate AI responses"""
+    call_id = request.forms.get("callid")
+    audio_url = request.forms.get("wav")
+
+    if not call_id or not audio_url:
+        return {"status": "error", "message": "Missing callid or wav"}, 400
+
+    try:
+        # Process the conversation turn
+        audio_path, response_text = conversation_manager.process_conversation_turn(
+            audio_url, call_id, 1
+        )
+
+        if audio_path:
+            filename = Path(audio_path).name
+            print(f"✅ Generated response for call {call_id}: {response_text}")
+            return {"status": "success", "filename": filename}
+        else:
+            print(f"❌ Failed to generate response for call {call_id}")
+            return {"status": "error", "message": "Processing failed"}, 500
+
+    except Exception as e:
+        print(f"❌ Recording processing failed: {e}")
+        return {"status": "error", "message": "Processing failed"}, 500
+
+
 # --- Core 46elks API ---
 @app.post("/calls")
 def calls():
     from_number = (request.forms.get("from") or "").replace(" ", "")
-    print(f"from={from_number} mil={settings.get('MIL_NUMBER')}")
+    call_id = request.forms.get("callid")
+    mode = request.query.get("mode")
 
-    if from_number == settings.get("MIL_NUMBER"):
-        # Determine which audio to play based on schedule or default
+    print(
+        f"from={from_number} mil={settings.get('MIL_NUMBER')} mode={mode} callid={call_id}"
+    )
+
+    # Non-MIL calls go to fallback
+    if from_number != settings.get("MIL_NUMBER"):
+        return {"connect": settings.get("FALLBACK_NUMBER", "")}
+
+    # Check if AI replies are enabled
+    if not settings.get("AI_REPLIES_ENABLED", True):
+        # Fallback to original behavior
         active_audio = _get_active_audio()
-
-        if active_audio:
-            # Security check: ensure file still exists before instructing a play
-            if os.path.isfile(os.path.join(AUDIO_DIR, active_audio)):
-                audio_url = f"https://calls.mtup.xyz/audio/{active_audio}"
-                return {"play": audio_url}
-
-        # If no scheduled or default audio, or if file is missing, hang up.
+        if active_audio and os.path.isfile(os.path.join(AUDIO_DIR, active_audio)):
+            return {"play": f"https://calls.mtup.xyz/audio/{active_audio}"}
         return {"hangup": ""}
 
-    # For any other number, connect to fallback
-    return {"connect": settings.get("FALLBACK_NUMBER", "")}
+    # AI Conversation Flow
+    base_url = "https://calls.mtup.xyz"
+    max_turns = settings.get("MAX_TURNS", 3)
+
+    if not mode:
+        # Initial greeting
+        return {
+            "play": f"{base_url}/audio/hello.mp3",
+            "skippable": False,
+            "next": f"{base_url}/calls?mode=record1&callid={call_id}",
+        }
+
+    elif mode.startswith("record"):
+        turn = int(mode.replace("record", ""))
+        return {
+            "record": f"{base_url}/recordings",
+            "silencedetection": "yes",
+            "timelimit": 12,
+            "next": f"{base_url}/calls?mode=reply{turn}&callid={call_id}",
+        }
+
+    elif mode.startswith("reply"):
+        turn = int(mode.replace("reply", ""))
+
+        # Check if reply file exists
+        reply_file = f"reply-{call_id}-{turn}.mp3"
+        reply_path = os.path.join(AUDIO_DIR, reply_file)
+
+        if os.path.exists(reply_path):
+            response_data = {"play": f"{base_url}/audio/{reply_file}"}
+
+            # Continue conversation if not at max turns
+            if turn < max_turns:
+                response_data["next"] = (
+                    f"{base_url}/calls?mode=record{turn + 1}&callid={call_id}"
+                )
+            else:
+                # Add closing message
+                response_data["next"] = (
+                    f"{base_url}/calls?mode=closing&callid={call_id}"
+                )
+
+            return response_data
+        else:
+            # Reply not ready yet, wait and retry
+            return {
+                "play": f"{base_url}/audio/waiting.mp3",
+                "next": f"{base_url}/calls?mode=reply{turn}&callid={call_id}",
+            }
+
+    elif mode == "closing":
+        return {
+            "play": f"{base_url}/audio/goodbye.mp3"
+            # No next - call ends here
+        }
+
+    # Fallback to original behavior
+    active_audio = _get_active_audio()
+    if active_audio and os.path.isfile(os.path.join(AUDIO_DIR, active_audio)):
+        return {"play": f"{base_url}/audio/{active_audio}"}
+
+    return {"hangup": ""}
 
 
 # --- Settings & Configuration API ---
@@ -123,6 +227,14 @@ def post_settings():
     ):
         settings["MIL_NUMBER"] = new_data["MIL_NUMBER"]
         settings["FALLBACK_NUMBER"] = new_data["FALLBACK_NUMBER"]
+
+        # Update AI settings if provided
+        if "MAX_TURNS" in new_data:
+            settings["MAX_TURNS"] = new_data["MAX_TURNS"]
+        if "LANG" in new_data:
+            settings["LANG"] = new_data["LANG"]
+        if "AI_REPLIES_ENABLED" in new_data:
+            settings["AI_REPLIES_ENABLED"] = new_data["AI_REPLIES_ENABLED"]
 
         selected_file = new_data["ACTIVE_AUDIO_FILE"]
         if selected_file is None:

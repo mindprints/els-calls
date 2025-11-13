@@ -1,2 +1,5 @@
 bottle
 gunicorn
+python-dotenv
+requests
+elevenlabs
