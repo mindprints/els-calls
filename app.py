@@ -426,15 +426,15 @@ def get_settings():
 
 @app.post("/settings")
 def post_settings():
-    """Update and save general settings (MIL, Fallback, default audio)."""
+    """Update and save general settings (MIL, Fallback, default audio, AI settings)."""
     new_data = request.json
-    if (
-        new_data
-        and "MIL_NUMBER" in new_data
-        and "FALLBACK_NUMBER" in new_data
-        and "ACTIVE_AUDIO_FILE" in new_data
-    ):
+    if not new_data:
+        return {"status": "error", "message": "No data provided."}, 400
+
+    # Update general settings if provided
+    if "MIL_NUMBER" in new_data:
         settings["MIL_NUMBER"] = new_data["MIL_NUMBER"]
+    if "FALLBACK_NUMBER" in new_data:
         settings["FALLBACK_NUMBER"] = new_data["FALLBACK_NUMBER"]
 
         # Update AI settings if provided
@@ -445,6 +445,8 @@ def post_settings():
         if "AI_REPLIES_ENABLED" in new_data:
             settings["AI_REPLIES_ENABLED"] = new_data["AI_REPLIES_ENABLED"]
 
+    # Update active audio file if provided
+    if "ACTIVE_AUDIO_FILE" in new_data:
         selected_file = new_data["ACTIVE_AUDIO_FILE"]
         if selected_file is None:
             settings["ACTIVE_AUDIO_FILE"] = None
