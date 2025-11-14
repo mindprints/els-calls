@@ -10,6 +10,18 @@ from bottle import Bottle, request, response, static_file
 
 app = Bottle()
 
+
+# CORS middleware
+@app.hook("after_request")
+def enable_cors():
+    """Add CORS headers to all responses."""
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = (
+        "Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token"
+    )
+
+
 # --- Embedded AI Conversation Module ---
 
 
@@ -249,8 +261,17 @@ settings.setdefault("SCHEDULE", [])
 
 def _save_settings():
     """Helper function to save the current settings to file."""
-    with open(SETTINGS_FILE, "w") as f:
-        json.dump(settings, f, indent=4)
+    print(f"💾 Attempting to save settings to {SETTINGS_FILE}")
+    try:
+        with open(SETTINGS_FILE, "w") as f:
+            json.dump(settings, f, indent=4)
+        print(f"✅ Settings saved successfully to {SETTINGS_FILE}")
+    except Exception as e:
+        print(f"❌ ERROR saving settings to {SETTINGS_FILE}: {str(e)}")
+        import traceback
+
+        traceback.print_exc()
+        raise
 
 
 def _get_active_audio():
@@ -288,6 +309,13 @@ def _get_active_audio():
 @app.get("/")
 def index():
     return static_file("index.html", root="/app")
+
+
+@app.route("/", method="OPTIONS")
+@app.route("/<path:path>", method="OPTIONS")
+def options_handler(path=None):
+    """Handle OPTIONS requests for CORS preflight."""
+    return {}
 
 
 @app.get("/wip")
@@ -427,15 +455,22 @@ def get_settings():
 @app.post("/settings")
 def post_settings():
     """Update and save general settings (MIL, Fallback, default audio, AI settings)."""
-    new_data = request.json
-    if not new_data:
-        return {"status": "error", "message": "No data provided."}, 400
+    try:
+        print(f"🔧 POST /settings received request")
+        new_data = request.json
+        print(f"📝 Parsed JSON data: {new_data}")
 
-    # Update general settings if provided
-    if "MIL_NUMBER" in new_data:
-        settings["MIL_NUMBER"] = new_data["MIL_NUMBER"]
-    if "FALLBACK_NUMBER" in new_data:
-        settings["FALLBACK_NUMBER"] = new_data["FALLBACK_NUMBER"]
+        if not new_data:
+            response.content_type = "application/json"
+            return {"status": "error", "message": "No data provided."}, 400
+
+        print(f"📝 Processing settings update with keys: {list(new_data.keys())}")
+
+        # Update general settings if provided
+        if "MIL_NUMBER" in new_data:
+            settings["MIL_NUMBER"] = new_data["MIL_NUMBER"]
+        if "FALLBACK_NUMBER" in new_data:
+            settings["FALLBACK_NUMBER"] = new_data["FALLBACK_NUMBER"]
 
         # Update AI settings if provided
         if "MAX_TURNS" in new_data:
@@ -445,25 +480,44 @@ def post_settings():
         if "AI_REPLIES_ENABLED" in new_data:
             settings["AI_REPLIES_ENABLED"] = new_data["AI_REPLIES_ENABLED"]
 
-    # Update active audio file if provided
-    if "ACTIVE_AUDIO_FILE" in new_data:
-        selected_file = new_data["ACTIVE_AUDIO_FILE"]
-        if selected_file is None:
-            settings["ACTIVE_AUDIO_FILE"] = None
-        else:
-            audio_file_path = os.path.join(AUDIO_DIR, selected_file)
-            if os.path.isfile(audio_file_path):
-                settings["ACTIVE_AUDIO_FILE"] = selected_file
+        # Update active audio file if provided
+        if "ACTIVE_AUDIO_FILE" in new_data:
+            selected_file = new_data["ACTIVE_AUDIO_FILE"]
+            print(f"🎵 Processing ACTIVE_AUDIO_FILE: {selected_file}")
+            if selected_file is None:
+                settings["ACTIVE_AUDIO_FILE"] = None
+                print("🎵 Set ACTIVE_AUDIO_FILE to None")
             else:
-                return {
-                    "status": "error",
-                    "message": "Invalid default audio file.",
-                }, 400
+                audio_file_path = os.path.join(AUDIO_DIR, selected_file)
+                print(f"🎵 Checking audio file path: {audio_file_path}")
+                print(f"🎵 File exists: {os.path.isfile(audio_file_path)}")
+                if os.path.isfile(audio_file_path):
+                    settings["ACTIVE_AUDIO_FILE"] = selected_file
+                    print(f"🎵 Set ACTIVE_AUDIO_FILE to {selected_file}")
+                else:
+                    response.content_type = "application/json"
+                    print(f"❌ Audio file not found: {selected_file}")
+                    return {
+                        "status": "error",
+                        "message": "Invalid default audio file.",
+                    }, 400
 
+        # Save settings and return success
+        print(f"💾 Saving settings to file...")
         _save_settings()
+        print(f"✅ Settings saved successfully")
+        print(f"📋 Final settings: {settings}")
+        response.content_type = "application/json"
         return {"status": "success", "settings": settings}
 
-    return {"status": "error", "message": "Invalid payload"}, 400
+    except Exception as e:
+        print(f"❌ ERROR in post_settings: {str(e)}")
+        import traceback
+
+        print("🔍 Full traceback:")
+        traceback.print_exc()
+        response.content_type = "application/json"
+        return {"status": "error", "message": f"Internal server error: {str(e)}"}, 500
 
 
 # --- Schedule API ---
