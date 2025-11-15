@@ -322,6 +322,19 @@ def _get_active_audio():
     Determines the correct audio file to play based on the schedule.
     Returns the filename of the audio to play, or None if no audio should be played.
     """
+    active_slot = _get_active_schedule_slot()
+    if active_slot:
+        return active_slot["audio_file"]
+
+    # If no schedule matches, return the default active audio file
+    return settings.get("ACTIVE_AUDIO_FILE")
+
+
+def _get_active_schedule_slot():
+    """
+    Determines the active schedule slot based on current time.
+    Returns the schedule slot dict or None if no slot is active.
+    """
     # Use UTC for server-side time comparison
     now = datetime.utcnow().time()
 
@@ -335,17 +348,16 @@ def _get_active_audio():
             if start_time <= end_time:
                 # Normal same-day schedule
                 if start_time <= now < end_time:
-                    return slot["audio_file"]
+                    return slot
             else:
                 # Overnight schedule (spans across midnight)
                 if now >= start_time or now < end_time:
-                    return slot["audio_file"]
+                    return slot
         except (ValueError, KeyError) as e:
             print(f"Skipping invalid schedule slot: {slot}. Error: {e}")
             continue
 
-    # If no schedule matches, return the default active audio file
-    return settings.get("ACTIVE_AUDIO_FILE")
+    return None
 
 
 # --- Static & UI Endpoints ---
@@ -416,9 +428,19 @@ def calls():
     if from_number != settings.get("MIL_NUMBER"):
         return {"connect": settings.get("FALLBACK_NUMBER", "")}
 
-    # Check if AI replies are enabled
-    if not settings.get("AI_REPLIES_ENABLED", True):
-        # Fallback to original behavior
+    # Check if AI voice chat is enabled for current schedule slot
+    active_slot = _get_active_schedule_slot()
+    ai_voice_chat_enabled = False
+
+    if active_slot:
+        # Use AI voice chat if explicitly enabled for this slot
+        ai_voice_chat_enabled = active_slot.get("ai_voice_chat_enabled", False)
+    else:
+        # Use global AI setting if no schedule slot is active
+        ai_voice_chat_enabled = settings.get("AI_REPLIES_ENABLED", True)
+
+    if not ai_voice_chat_enabled:
+        # Fallback to original behavior - play scheduled audio
         active_audio = _get_active_audio()
         if active_audio and os.path.isfile(os.path.join(AUDIO_DIR, active_audio)):
             return {"play": f"https://calls.mtup.xyz/audio/{active_audio}"}
@@ -623,6 +645,7 @@ def add_schedule_entry():
         "audio_file": data["audio_file"],
         "start_time": data["start_time"],
         "end_time": data["end_time"],
+        "ai_voice_chat_enabled": data.get("ai_voice_chat_enabled", False),
     }
 
     settings["SCHEDULE"].append(new_slot)

@@ -88,6 +88,39 @@
                 justify-content: space-between;
                 align-items: center;
             }
+            .voice-message-item {
+                padding: 8px;
+                border-bottom: 1px solid #eee;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                transition: background-color 0.2s;
+            }
+            .voice-message-item:hover {
+                background-color: #f5f5f5;
+            }
+            .voice-message-item:active {
+                background-color: #e0e0e0;
+            }
+            .ai-voice-chat-slot {
+                background-color: #e8f4fd;
+                border-left: 4px solid #2c5aa0;
+            }
+            .recording-active {
+                animation: pulse 1.5s infinite;
+            }
+            @keyframes pulse {
+                0% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.5;
+                }
+                100% {
+                    opacity: 1;
+                }
+            }
         </style>
     </head>
     <body>
@@ -143,7 +176,7 @@
 
                 <label>Default Active Audio (when no schedule matches):</label>
                 <div id="audio-list">
-                    <p>Loading audio files...</p>
+                    <p id="audio-loading">Loading audio files...</p>
                 </div>
                 <br />
 
@@ -168,12 +201,56 @@
                 <label for="end_time">End Time (UTC):</label>
                 <input type="time" id="end_time" required />
 
+                <div style="margin: 10px 0">
+                    <input
+                        type="checkbox"
+                        id="ai-voice-chat-enabled"
+                        name="ai_voice_chat_enabled"
+                    />
+                    <label
+                        for="ai-voice-chat-enabled"
+                        style="display: inline; margin-left: 5px"
+                    >
+                        Enable AI Voice Chat for this slot
+                    </label>
+                    <span
+                        style="
+                            margin-left: 8px;
+                            color: #666;
+                            cursor: help;
+                            font-size: 0.9em;
+                        "
+                        title="When enabled, calls during this time slot will use AI conversation instead of playing the selected audio file"
+                    >
+                        (❓)
+                    </span>
+                </div>
+
                 <button type="submit">Add to Schedule</button>
             </form>
 
             <h4>Current Schedule</h4>
             <div id="schedule-list">
-                <p>Loading schedule...</p>
+                <p id="schedule-loading">Loading schedule...</p>
+            </div>
+        </div>
+
+        <hr />
+
+        <!-- Voice Messages Review -->
+        <div class="section">
+            <h3>Voice Messages Review</h3>
+            <p>Click on any voice message to play it:</p>
+            <div
+                id="voice-messages-list"
+                style="
+                    max-height: 300px;
+                    overflow-y: auto;
+                    border: 1px solid #ccc;
+                    padding: 10px;
+                "
+            >
+                <p id="voice-messages-loading">Loading voice messages...</p>
             </div>
         </div>
 
@@ -193,6 +270,22 @@
                     <strong>Status:</strong>
                     <span id="record-status">Ready</span>
                 </p>
+                <div
+                    id="recording-indicator"
+                    class="recording-active"
+                    style="
+                        display: none;
+                        color: red;
+                        font-weight: bold;
+                        margin: 10px 0;
+                        padding: 10px;
+                        border-radius: 4px;
+                        background-color: #ffe6e6;
+                        border: 1px solid #ffcccc;
+                    "
+                >
+                    🔴 RECORDING IN PROGRESS
+                </div>
                 <audio
                     id="preview-player"
                     controls
@@ -260,6 +353,9 @@
                 const stopRecordBtn =
                     document.getElementById("stop-record-btn");
                 const recordStatus = document.getElementById("record-status");
+                const recordingIndicator = document.getElementById(
+                    "recording-indicator",
+                );
                 const previewPlayer = document.getElementById("preview-player");
                 const previewControls =
                     document.getElementById("preview-controls");
@@ -281,9 +377,32 @@
 
                 // --- DATA LOADING & RENDERING ---
                 function loadData() {
+                    // Show loading states
+                    document.getElementById("audio-loading").textContent =
+                        "Loading...";
+                    document.getElementById("schedule-loading").textContent =
+                        "Loading...";
+                    document.getElementById(
+                        "voice-messages-loading",
+                    ).textContent = "Loading...";
+
                     Promise.all([
-                        fetch("/settings").then((res) => res.json()),
-                        fetch("/audio_files").then((res) => res.json()),
+                        fetch("/settings").then((res) => {
+                            if (!res.ok) {
+                                throw new Error(
+                                    `Settings failed: ${res.status}`,
+                                );
+                            }
+                            return res.json();
+                        }),
+                        fetch("/audio_files").then((res) => {
+                            if (!res.ok) {
+                                throw new Error(
+                                    `Audio files failed: ${res.status}`,
+                                );
+                            }
+                            return res.json();
+                        }),
                     ])
                         .then(([settings, files]) => {
                             renderAudioLists(settings, files);
@@ -292,55 +411,167 @@
                         })
                         .catch((error) => {
                             console.error("Error loading initial data:", error);
-                            alert("Error loading initial data.");
+
+                            // Show specific error messages
+                            document.getElementById(
+                                "audio-loading",
+                            ).textContent = "Error loading audio files";
+                            document.getElementById(
+                                "schedule-loading",
+                            ).textContent = "Error loading schedule";
+                            document.getElementById(
+                                "voice-messages-loading",
+                            ).textContent = "Error loading voice messages";
+
+                            alert("Error loading data: " + error.message);
                         });
                 }
 
                 function renderAudioLists(settings, files) {
                     audioListDiv.innerHTML = "";
                     scheduleAudioFileSelect.innerHTML = "";
+                    const voiceMessagesList = document.getElementById(
+                        "voice-messages-list",
+                    );
+                    voiceMessagesList.innerHTML = "";
+
+                    // Hide loading indicators
+                    document.getElementById("audio-loading").style.display =
+                        "none";
+                    document.getElementById(
+                        "voice-messages-loading",
+                    ).style.display = "none";
 
                     if (!files || files.length === 0) {
                         audioListDiv.innerHTML =
                             "<p>No audio files uploaded.</p>";
+                        voiceMessagesList.innerHTML =
+                            "<p>No voice messages available.</p>";
                         return;
                     }
 
+                    // Separate AI voice chat files from regular audio files
+                    const aiVoiceFiles = [
+                        "hello.mp3",
+                        "waiting.mp3",
+                        "goodbye.mp3",
+                        "fallback.mp3",
+                    ];
+                    const regularFiles = files.filter(
+                        (file) => !aiVoiceFiles.includes(file),
+                    );
+                    const aiFiles = files.filter((file) =>
+                        aiVoiceFiles.includes(file),
+                    );
+
+                    // Render regular audio files first
+                    if (regularFiles.length > 0) {
+                        const regularHeader = document.createElement("h4");
+                        regularHeader.textContent = "Regular Audio Files";
+                        regularHeader.style.marginTop = "1em";
+                        audioListDiv.appendChild(regularHeader);
+
+                        regularFiles.forEach((file) => {
+                            createAudioFileItem(file, settings, audioListDiv);
+                        });
+                    }
+
+                    // Render AI voice chat files separately
+                    if (aiFiles.length > 0) {
+                        const aiHeader = document.createElement("h4");
+                        aiHeader.textContent = "AI Voice Chat Files";
+                        aiHeader.style.marginTop = "1em";
+                        aiHeader.style.color = "#2c5aa0";
+                        audioListDiv.appendChild(aiHeader);
+
+                        aiFiles.forEach((file) => {
+                            createAudioFileItem(file, settings, audioListDiv);
+                        });
+                    }
+
+                    // Add all files to schedule dropdown
                     files.forEach((file) => {
-                        // For default audio selection (radio buttons with delete)
-                        const itemDiv = document.createElement("div");
-                        itemDiv.className = "audio-item";
-
-                        const radio = document.createElement("input");
-                        radio.type = "radio";
-                        radio.name = "active_audio";
-                        radio.id = `audio-radio-${file}`;
-                        radio.value = file;
-                        if (file === settings.ACTIVE_AUDIO_FILE) {
-                            radio.checked = true;
-                        }
-
-                        const label = document.createElement("label");
-                        label.htmlFor = `audio-radio-${file}`;
-                        label.textContent = file;
-
-                        const deleteBtn = document.createElement("button");
-                        deleteBtn.textContent = "Delete";
-                        deleteBtn.className = "delete audio-delete";
-                        deleteBtn.type = "button";
-                        deleteBtn.dataset.filename = file;
-
-                        itemDiv.appendChild(radio);
-                        itemDiv.appendChild(label);
-                        itemDiv.appendChild(deleteBtn);
-                        audioListDiv.appendChild(itemDiv);
-
-                        // For schedule form (dropdown)
                         const option = document.createElement("option");
                         option.value = file;
                         option.textContent = file;
                         scheduleAudioFileSelect.appendChild(option);
                     });
+
+                    // Create voice messages review list
+                    files.forEach((file) => {
+                        const messageDiv = document.createElement("div");
+                        messageDiv.className = "voice-message-item";
+                        messageDiv.style.padding = "8px";
+                        messageDiv.style.borderBottom = "1px solid #eee";
+                        messageDiv.style.cursor = "pointer";
+                        messageDiv.style.display = "flex";
+                        messageDiv.style.alignItems = "center";
+                        messageDiv.style.gap = "10px";
+
+                        const playIcon = document.createElement("span");
+                        playIcon.textContent = "▶️";
+                        playIcon.style.fontSize = "12px";
+
+                        const fileName = document.createElement("span");
+                        fileName.textContent = file;
+
+                        const audioPlayer = document.createElement("audio");
+                        audioPlayer.style.display = "none";
+                        audioPlayer.src = `/audio/${file}`;
+                        audioPlayer.preload = "metadata";
+
+                        messageDiv.appendChild(playIcon);
+                        messageDiv.appendChild(fileName);
+                        messageDiv.appendChild(audioPlayer);
+                        voiceMessagesList.appendChild(messageDiv);
+
+                        messageDiv.addEventListener("click", () => {
+                            if (audioPlayer.paused) {
+                                audioPlayer.play();
+                                playIcon.textContent = "⏸️";
+                            } else {
+                                audioPlayer.pause();
+                                playIcon.textContent = "▶️";
+                            }
+                        });
+
+                        audioPlayer.addEventListener("ended", () => {
+                            playIcon.textContent = "▶️";
+                        });
+
+                        audioPlayer.addEventListener("pause", () => {
+                            playIcon.textContent = "▶️";
+                        });
+                    });
+                }
+
+                function createAudioFileItem(file, settings, container) {
+                    const itemDiv = document.createElement("div");
+                    itemDiv.className = "audio-item";
+
+                    const radio = document.createElement("input");
+                    radio.type = "radio";
+                    radio.name = "active_audio";
+                    radio.id = `audio-radio-${file}`;
+                    radio.value = file;
+                    if (file === settings.ACTIVE_AUDIO_FILE) {
+                        radio.checked = true;
+                    }
+
+                    const label = document.createElement("label");
+                    label.htmlFor = `audio-radio-${file}`;
+                    label.textContent = file;
+
+                    const deleteBtn = document.createElement("button");
+                    deleteBtn.textContent = "Delete";
+                    deleteBtn.className = "delete audio-delete";
+                    deleteBtn.type = "button";
+                    deleteBtn.dataset.filename = file;
+
+                    itemDiv.appendChild(radio);
+                    itemDiv.appendChild(label);
+                    itemDiv.appendChild(deleteBtn);
+                    container.appendChild(itemDiv);
                 }
 
                 function renderSettingsForm(settings) {
@@ -356,6 +587,10 @@
 
                 function renderSchedule(schedule) {
                     scheduleListDiv.innerHTML = "";
+                    // Hide loading indicator
+                    document.getElementById("schedule-loading").style.display =
+                        "none";
+
                     if (!schedule || schedule.length === 0) {
                         scheduleListDiv.innerHTML =
                             "<p>No scheduled items.</p>";
@@ -364,8 +599,32 @@
                     schedule.forEach((slot, index) => {
                         const slotDiv = document.createElement("div");
                         slotDiv.className = "slot";
+
+                        // Check if this is an AI voice chat slot
+                        const aiVoiceFiles = [
+                            "hello.mp3",
+                            "waiting.mp3",
+                            "goodbye.mp3",
+                            "fallback.mp3",
+                        ];
+                        const isAIVoiceFile = aiVoiceFiles.includes(
+                            slot.audio_file,
+                        );
+                        const isAIVoiceChat =
+                            slot.ai_voice_chat_enabled || isAIVoiceFile;
+
+                        if (isAIVoiceChat) {
+                            slotDiv.classList.add("ai-voice-chat-slot");
+                        }
+
                         const text = document.createElement("span");
-                        text.textContent = `Play "${slot.audio_file}" from ${slot.start_time} to ${slot.end_time}`;
+                        if (isAIVoiceChat) {
+                            text.innerHTML = `🎙️ <strong>AI Voice Chat</strong> - "${slot.audio_file}" from ${slot.start_time} to ${slot.end_time}`;
+                            text.style.color = "#2c5aa0";
+                        } else {
+                            text.textContent = `Play "${slot.audio_file}" from ${slot.start_time} to ${slot.end_time}`;
+                        }
+
                         const deleteBtn = document.createElement("button");
                         deleteBtn.textContent = "Delete";
                         deleteBtn.className = "delete";
@@ -402,6 +661,8 @@
                     saveRecordBtn.disabled = true;
                     discardRecordBtn.disabled = true;
                     recordStatus.textContent = "Ready";
+                    recordingIndicator.style.display = "none";
+                    recordingIndicator.classList.remove("recording-active");
                     previewPlayer.style.display = "none";
                     previewControls.style.display = "none";
                     if (previewPlayer.src) {
@@ -435,6 +696,10 @@
                             startRecordBtn.disabled = true;
                             stopRecordBtn.disabled = false;
                             recordStatus.textContent = "Recording...";
+                            recordingIndicator.style.display = "block";
+                            recordingIndicator.classList.add(
+                                "recording-active",
+                            );
                             mediaRecorder.start();
                         })
                         .catch((err) => {
@@ -447,6 +712,8 @@
 
                 function stopRecording() {
                     mediaRecorder.stop();
+                    recordingIndicator.style.display = "none";
+                    recordingIndicator.classList.remove("recording-active");
                     mediaRecorder.stream
                         .getTracks()
                         .forEach((track) => track.stop()); // Release microphone
@@ -658,6 +925,9 @@
                         audio_file: scheduleAudioFileSelect.value,
                         start_time: startTimeInput.value,
                         end_time: endTimeInput.value,
+                        ai_voice_chat_enabled: document.getElementById(
+                            "ai-voice-chat-enabled",
+                        ).checked,
                     };
 
                     fetch("/schedule", {
@@ -671,10 +941,25 @@
                                 alert("Schedule updated!");
                                 renderSchedule(data.schedule);
                                 scheduleForm.reset();
+                                // Refresh audio files to update schedule dropdown
+                                loadData();
                             } else {
-                                alert(
-                                    "Error updating schedule: " + data.message,
-                                );
+                                // Show detailed error message for conflicts
+                                if (
+                                    data.status === "error" &&
+                                    data.message.includes("conflict")
+                                ) {
+                                    alert(
+                                        "❌ Schedule Conflict: " +
+                                            data.message +
+                                            "\n\nPlease choose a different time slot.",
+                                    );
+                                } else {
+                                    alert(
+                                        "Error updating schedule: " +
+                                            data.message,
+                                    );
+                                }
                             }
                         })
                         .catch((error) => {
@@ -729,6 +1014,7 @@
                             if (data.status === "success") {
                                 alert("File uploaded successfully!");
                                 uploadForm.reset();
+                                // Refresh the audio files list
                                 loadData();
                             } else {
                                 alert("Error uploading file: " + data.message);
