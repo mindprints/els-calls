@@ -62,32 +62,75 @@ class AIConversation:
             return None
 
         try:
-            # Download the audio file
-            response = requests.get(audio_url, timeout=10)
-            response.raise_for_status()
+            # Use current Soniox API - create transcription request
+            soniox_url = "https://api.soniox.com/v1/transcriptions"
+            headers = {
+                "Authorization": f"Bearer {self.soniox_api_key}",
+                "Content-Type": "application/json",
+            }
 
-            # Upload to Soniox for transcription
-            soniox_url = "https://api.soniox.com/v1/transcribe_async"
-            headers = {"X-API-KEY": self.soniox_api_key}
+            # Create transcription request
+            payload = {
+                "audio_url": audio_url,
+                "model": "stt-async-preview",
+                "language_hints": [self.default_language],
+            }
 
-            files = {"audio_file": ("audio.wav", response.content, "audio/wav")}
-            data = {"language_code": self.default_language}
-
-            transcribe_response = requests.post(
-                soniox_url, headers=headers, files=files, data=data, timeout=30
+            create_response = requests.post(
+                soniox_url, headers=headers, json=payload, timeout=30
             )
-            transcribe_response.raise_for_status()
+            create_response.raise_for_status()
 
-            result = transcribe_response.json()
+            transcription_data = create_response.json()
+            transcription_id = transcription_data["id"]
+            print(f"📝 Created transcription: {transcription_id}")
 
-            # Extract text from result
-            if "words" in result:
-                text = " ".join([word["text"] for word in result["words"]])
-                print(f"🎙️  STT Result: {text}")
-                return text
-            else:
-                print("❌ No transcription result from Soniox")
-                return None
+            # Poll for transcription result (simple synchronous approach)
+            max_attempts = 20
+            for attempt in range(max_attempts):
+                time.sleep(3)  # Wait 3 seconds between checks
+
+                # Get transcription status
+                status_url = f"{soniox_url}/{transcription_id}"
+                status_response = requests.get(status_url, headers=headers, timeout=10)
+                status_response.raise_for_status()
+
+                status_data = status_response.json()
+                status = status_data["status"]
+
+                if status == "completed":
+                    # Get the transcript
+                    transcript_url = f"{soniox_url}/{transcription_id}/transcript"
+                    transcript_response = requests.get(
+                        transcript_url, headers=headers, timeout=10
+                    )
+                    transcript_response.raise_for_status()
+
+                    transcript_data = transcript_response.json()
+
+                    # Extract text from result
+                    if "text" in transcript_data:
+                        text = transcript_data["text"]
+                        print(f"🎙️  STT Result: {text}")
+                        return text
+                    else:
+                        print("❌ No transcription text in result")
+                        return None
+
+                elif status == "error":
+                    print(
+                        f"❌ Transcription failed: {status_data.get('error_message', 'Unknown error')}"
+                    )
+                    return None
+
+                print(
+                    f"⏳ Transcription status: {status} (attempt {attempt + 1}/{max_attempts})"
+                )
+
+            print(
+                f"❌ Transcription timeout - took too long to complete (waited {max_attempts * 3} seconds)"
+            )
+            return None
 
         except Exception as e:
             print(f"❌ STT failed: {e}")
