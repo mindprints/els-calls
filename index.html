@@ -378,13 +378,18 @@
                 // --- DATA LOADING & RENDERING ---
                 function loadData() {
                     // Show loading states
-                    document.getElementById("audio-loading").textContent =
-                        "Loading...";
-                    document.getElementById("schedule-loading").textContent =
-                        "Loading...";
-                    document.getElementById(
+                    const audioLoading =
+                        document.getElementById("audio-loading");
+                    if (audioLoading) audioLoading.textContent = "Loading...";
+                    const scheduleLoading =
+                        document.getElementById("schedule-loading");
+                    if (scheduleLoading)
+                        scheduleLoading.textContent = "Loading...";
+                    const voiceMessagesLoading = document.getElementById(
                         "voice-messages-loading",
-                    ).textContent = "Loading...";
+                    );
+                    if (voiceMessagesLoading)
+                        voiceMessagesLoading.textContent = "Loading...";
 
                     Promise.all([
                         fetch("/settings").then((res) => {
@@ -413,15 +418,25 @@
                             console.error("Error loading initial data:", error);
 
                             // Show specific error messages
-                            document.getElementById(
-                                "audio-loading",
-                            ).textContent = "Error loading audio files";
-                            document.getElementById(
-                                "schedule-loading",
-                            ).textContent = "Error loading schedule";
-                            document.getElementById(
-                                "voice-messages-loading",
-                            ).textContent = "Error loading voice messages";
+                            // Show specific error messages safely
+                            const audioLoading =
+                                document.getElementById("audio-loading");
+                            const scheduleLoading =
+                                document.getElementById("schedule-loading");
+                            const voiceMessagesLoading =
+                                document.getElementById(
+                                    "voice-messages-loading",
+                                );
+
+                            if (audioLoading)
+                                audioLoading.textContent =
+                                    "Error loading audio files";
+                            if (scheduleLoading)
+                                scheduleLoading.textContent =
+                                    "Error loading schedule";
+                            if (voiceMessagesLoading)
+                                voiceMessagesLoading.textContent =
+                                    "Error loading voice messages";
 
                             alert("Error loading data: " + error.message);
                         });
@@ -433,20 +448,27 @@
                     const voiceMessagesList = document.getElementById(
                         "voice-messages-list",
                     );
-                    voiceMessagesList.innerHTML = "";
+                    if (voiceMessagesList) {
+                        voiceMessagesList.innerHTML = "";
+                    }
 
-                    // Hide loading indicators
-                    document.getElementById("audio-loading").style.display =
-                        "none";
-                    document.getElementById(
+                    // Hide loading indicators safely
+                    const audioLoading =
+                        document.getElementById("audio-loading");
+                    const voiceMessagesLoading = document.getElementById(
                         "voice-messages-loading",
-                    ).style.display = "none";
+                    );
+                    if (audioLoading) audioLoading.style.display = "none";
+                    if (voiceMessagesLoading)
+                        voiceMessagesLoading.style.display = "none";
 
                     if (!files || files.length === 0) {
                         audioListDiv.innerHTML =
                             "<p>No audio files uploaded.</p>";
-                        voiceMessagesList.innerHTML =
-                            "<p>No voice messages available.</p>";
+                        if (voiceMessagesList) {
+                            voiceMessagesList.innerHTML =
+                                "<p>No voice messages available.</p>";
+                        }
                         return;
                     }
 
@@ -498,51 +520,53 @@
                     });
 
                     // Create voice messages review list
-                    files.forEach((file) => {
-                        const messageDiv = document.createElement("div");
-                        messageDiv.className = "voice-message-item";
-                        messageDiv.style.padding = "8px";
-                        messageDiv.style.borderBottom = "1px solid #eee";
-                        messageDiv.style.cursor = "pointer";
-                        messageDiv.style.display = "flex";
-                        messageDiv.style.alignItems = "center";
-                        messageDiv.style.gap = "10px";
+                    if (voiceMessagesList) {
+                        files.forEach((file) => {
+                            const messageDiv = document.createElement("div");
+                            messageDiv.className = "voice-message-item";
+                            messageDiv.style.padding = "8px";
+                            messageDiv.style.borderBottom = "1px solid #eee";
+                            messageDiv.style.cursor = "pointer";
+                            messageDiv.style.display = "flex";
+                            messageDiv.style.alignItems = "center";
+                            messageDiv.style.gap = "10px";
 
-                        const playIcon = document.createElement("span");
-                        playIcon.textContent = "▶️";
-                        playIcon.style.fontSize = "12px";
+                            const playIcon = document.createElement("span");
+                            playIcon.textContent = "▶️";
+                            playIcon.style.fontSize = "12px";
 
-                        const fileName = document.createElement("span");
-                        fileName.textContent = file;
+                            const fileName = document.createElement("span");
+                            fileName.textContent = file;
 
-                        const audioPlayer = document.createElement("audio");
-                        audioPlayer.style.display = "none";
-                        audioPlayer.src = `/audio/${file}`;
-                        audioPlayer.preload = "metadata";
+                            const audioPlayer = document.createElement("audio");
+                            audioPlayer.style.display = "none";
+                            audioPlayer.src = `/audio/${file}`;
+                            audioPlayer.preload = "metadata";
 
-                        messageDiv.appendChild(playIcon);
-                        messageDiv.appendChild(fileName);
-                        messageDiv.appendChild(audioPlayer);
-                        voiceMessagesList.appendChild(messageDiv);
+                            messageDiv.appendChild(playIcon);
+                            messageDiv.appendChild(fileName);
+                            messageDiv.appendChild(audioPlayer);
+                            voiceMessagesList.appendChild(messageDiv);
 
-                        messageDiv.addEventListener("click", () => {
-                            if (audioPlayer.paused) {
-                                audioPlayer.play();
-                                playIcon.textContent = "⏸️";
-                            } else {
-                                audioPlayer.pause();
+                            messageDiv.addEventListener("click", () => {
+                                if (audioPlayer.paused) {
+                                    audioPlayer.play();
+                                    playIcon.textContent = "⏸️";
+                                } else {
+                                    audioPlayer.pause();
+                                    playIcon.textContent = "▶️";
+                                }
+                            });
+
+                            audioPlayer.addEventListener("ended", () => {
                                 playIcon.textContent = "▶️";
-                            }
-                        });
+                            });
 
-                        audioPlayer.addEventListener("ended", () => {
-                            playIcon.textContent = "▶️";
+                            audioPlayer.addEventListener("pause", () => {
+                                playIcon.textContent = "▶️";
+                            });
                         });
-
-                        audioPlayer.addEventListener("pause", () => {
-                            playIcon.textContent = "▶️";
-                        });
-                    });
+                    }
                 }
 
                 function createAudioFileItem(file, settings, container) {
@@ -587,9 +611,10 @@
 
                 function renderSchedule(schedule) {
                     scheduleListDiv.innerHTML = "";
-                    // Hide loading indicator
-                    document.getElementById("schedule-loading").style.display =
-                        "none";
+                    // Hide loading indicator safely
+                    const scheduleLoading =
+                        document.getElementById("schedule-loading");
+                    if (scheduleLoading) scheduleLoading.style.display = "none";
 
                     if (!schedule || schedule.length === 0) {
                         scheduleListDiv.innerHTML =
