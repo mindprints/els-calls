@@ -24,6 +24,9 @@
             padding: 2rem;
             border-radius: 8px;
         }
+        #app-container {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -41,11 +44,21 @@
         <!-- The entire dashboard UI goes here -->
         <div class="sidebar">
             <h1>Dashboard</h1>
-            <button class="nav-button active" onclick="showTab('settings')">Settings</button>
-            <button class="nav-button" onclick="showTab('schedule')">Schedule</button>
-            <button class="nav-button" onclick="showTab('audio')">Audio Management</button>
+            <button class="nav-button active" data-tab="settings">Settings</button>
+            <button class="nav-button" data-tab="schedule">Schedule</button>
+            <button class="nav-button" data-tab="audio">Audio Management</button>
         </div>
-        <!-- ... (rest of the dashboard HTML) -->
+        <div class="main-content">
+            <div id="settings" class="tab-content active">
+                <!-- Settings content -->
+            </div>
+            <div id="schedule" class="tab-content">
+                <!-- Schedule content -->
+            </div>
+            <div id="audio" class="tab-content">
+                <!-- Audio content -->
+            </div>
+        </div>
     </div>
 
     <script>
@@ -83,9 +96,6 @@
                 loadData();
             }
         });
-
-        // Hide the app container by default
-        document.getElementById('app-container').style.display = 'none';
 
         // ... (rest of the application's JavaScript, adapted to use authenticatedFetch)
     </script>
