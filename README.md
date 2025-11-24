@@ -70,12 +70,32 @@ The dashboard allows you to:
 
 ### Environment Variables
 
-Required API keys for AI features:
+**Required API keys for AI features:**
 ```bash
 SONIOX_API_KEY=your_soniox_api_key
 DEEPSEEK_API_KEY=your_deepseek_api_key  
 ELEVENLABS_API_KEY=your_elevenlabs_api_key
 ```
+
+### Setting Up Environment Variables
+
+**For Local Development:**
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Edit `.env` and set your API keys:
+   ```bash
+   SONIOX_API_KEY=your_soniox_api_key
+   DEEPSEEK_API_KEY=your_deepseek_api_key
+   ELEVENLABS_API_KEY=your_elevenlabs_api_key
+   ```
+3. The `.env` file is already in `.gitignore` and will not be committed to version control.
+
+**For Docker/Production (Dokploy):**
+- Set environment variables in Dokploy's Environment Settings tab
+- Authentication is handled by Dokploy's built-in authentication (Advanced tab)
+- No application-level authentication code needed
 
 ### Settings (settings.json)
 
@@ -179,6 +199,22 @@ elevenlabs
 - **Error Handling**: Graceful fallback to MP3 files if AI services fail
 - **Performance**: Monitor STT→LLM→TTS pipeline latency
 - **API Quotas**: Track usage for Soniox, DeepSeek, and ElevenLabs APIs
+
+## Security
+
+### Authentication
+
+- **Dashboard Access**: Authentication is handled by Dokploy platform (configure in Advanced tab)
+- **API Keys**: Stored securely in environment variables (never in code)
+- **HTTPS**: Ensure HTTPS is enabled in production (via reverse proxy/load balancer)
+
+### Best Practices
+
+1. **Never commit `.env` files** - Already configured in `.gitignore`
+2. **Use Dokploy's authentication** - Configure access control in Dokploy's Advanced settings
+3. **Protect API keys** - Store API keys securely in environment variables
+4. **Limit access** - Only grant dashboard access to trusted users
+5. **Monitor logs** - Watch for failed requests and errors
 
 ## Troubleshooting
 

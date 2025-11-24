@@ -4,36 +4,17 @@ import time
 from datetime import datetime, time as time_obj
 from pathlib import Path
 from typing import Dict, Optional, Tuple
-from functools import wraps
 
+from dotenv import load_dotenv
 import requests
 from bottle import Bottle, request, response, static_file
 
+# Load environment variables from .env file (for API keys, etc.)
+load_dotenv()
+
 app = Bottle()
 
-# --- Authentication ---
-APP_USER = os.getenv("APP_USER", "admin")
-APP_PASSWORD = os.getenv("APP_PASSWORD", "password")
-
-def auth_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        auth = request.headers.get('Authorization')
-        if not auth:
-            response.status = 401
-            return '' # Return empty body for 401, no WWW-Authenticate header
-
-        try:
-            user, pwd = request.auth
-            if user != APP_USER or pwd != APP_PASSWORD:
-                response.status = 401
-                return "Authentication failed."
-        except (TypeError, ValueError):
-            response.status = 401
-            return "Invalid authentication."
-
-        return f(*args, **kwargs)
-    return decorated
+# Note: Authentication is handled by Dokploy platform, not in application code
 
 # CORS middleware
 @app.hook("after_request")
@@ -41,7 +22,7 @@ def enable_cors():
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = (
-        "Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token, Authorization"
+        "Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token"
     )
 
 class AIConversation:
@@ -288,11 +269,9 @@ def calls():
 
 # --- Settings & Configuration API ---
 @app.get("/settings")
-@auth_required
 def get_settings(): return settings
 
 @app.post("/settings")
-@auth_required
 def post_settings():
     new_data = request.json
     for key in ["MIL_NUMBER", "FALLBACK_NUMBER", "MAX_TURNS", "LANG", "ACTIVE_AUDIO_FILE"]:
@@ -302,7 +281,6 @@ def post_settings():
 
 # --- Schedule API ---
 @app.post("/schedule")
-@auth_required
 def add_schedule_entry():
     data = request.json
     # Basic validation
@@ -313,7 +291,6 @@ def add_schedule_entry():
     return {"status": "success", "schedule": settings["SCHEDULE"]}
 
 @app.delete("/schedule/<index:int>")
-@auth_required
 def delete_schedule_entry(index):
     if 0 <= index < len(settings["SCHEDULE"]):
         settings["SCHEDULE"].pop(index)
@@ -323,7 +300,6 @@ def delete_schedule_entry(index):
 
 # --- Named Numbers API ---
 @app.post("/named_numbers")
-@auth_required
 def add_named_number():
     data = request.json
     if "name" in data and "number" in data:
@@ -333,7 +309,6 @@ def add_named_number():
     return {"status": "error", "message": "Invalid payload."}, 400
 
 @app.delete("/named_numbers/<index:int>")
-@auth_required
 def delete_named_number(index):
     if 0 <= index < len(settings["NAMED_NUMBERS"]):
         settings["NAMED_NUMBERS"].pop(index)
@@ -343,7 +318,6 @@ def delete_named_number(index):
 
 # --- Audio File Management API ---
 @app.get("/audio_files")
-@auth_required
 def list_audio_files():
     try:
         files = [f for f in os.listdir(AUDIO_DIR) if f.endswith(".mp3")]
@@ -352,7 +326,6 @@ def list_audio_files():
         return json.dumps({"status": "error", "message": "Could not list audio files."}), 500
 
 @app.post("/upload_audio")
-@auth_required
 def upload_audio():
     upload = request.files.get("audio_file")
     if upload and upload.filename.lower().endswith(".mp3"):
@@ -362,7 +335,6 @@ def upload_audio():
     return {"status": "error", "message": "Invalid file."}, 400
 
 @app.delete("/audio/<filename>")
-@auth_required
 def delete_audio_file(filename: str):
     if ".." in filename or "/" in filename:
         return {"status": "error", "message": "Invalid filename."}, 400
