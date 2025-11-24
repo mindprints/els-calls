@@ -236,7 +236,6 @@ def _get_active_schedule_slot():
 
 # --- Static & UI Endpoints ---
 @app.get("/")
-@auth_required
 def index():
     return static_file("index.html", root="/app")
 
@@ -245,7 +244,6 @@ def index():
 def options_handler(path=None): return {}
 
 @app.get("/audio/<filename>")
-@auth_required
 def serve_audio(filename: str):
     return static_file(filename, root=AUDIO_DIR, mimetype="audio/mpeg")
 
