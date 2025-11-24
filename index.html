@@ -123,12 +123,48 @@
 
             <hr />
 
+            <!-- AI Chat Settings -->
+            <div class="section">
+                <h3>AI Chat Settings</h3>
+                <form id="ai-settings-form" onsubmit="return false;">
+                    <label for="max_turns">Maximum Conversation Turns:</label>
+                    <input type="number" id="max_turns" name="max_turns" min="1" max="10" value="3" />
+
+                    <label for="lang">Language Code:</label>
+                    <select id="lang" name="lang">
+                        <option value="sv">Swedish (sv)</option>
+                        <option value="en">English (en)</option>
+                        <option value="no">Norwegian (no)</option>
+                        <option value="da">Danish (da)</option>
+                    </select>
+
+                    <button type="submit" id="save-ai-settings-btn">
+                        Save AI Chat Settings
+                    </button>
+                </form>
+            </div>
+
+            <hr />
+
             <!-- Schedule Manager -->
             <div class="section">
                 <h3>Schedule Manager</h3>
                 <form id="schedule-form" onsubmit="return false;">
-                    <label for="schedule_audio_file">Audio File:</label>
-                    <select id="schedule_audio_file" required></select>
+                    <label for="schedule_audio_file">Action:</label>
+                    <select id="schedule_audio_file" required>
+                        <option value="AI_VOICE_CHAT">AI Voice Chat</option>
+                    </select>
+
+                    <label>Days of Week:</label>
+                    <div style="margin: 10px 0;">
+                        <label style="display: inline-block; margin-right: 15px;"><input type="checkbox" name="days" value="0" checked> Monday</label>
+                        <label style="display: inline-block; margin-right: 15px;"><input type="checkbox" name="days" value="1" checked> Tuesday</label>
+                        <label style="display: inline-block; margin-right: 15px;"><input type="checkbox" name="days" value="2" checked> Wednesday</label>
+                        <label style="display: inline-block; margin-right: 15px;"><input type="checkbox" name="days" value="3" checked> Thursday</label>
+                        <label style="display: inline-block; margin-right: 15px;"><input type="checkbox" name="days" value="4" checked> Friday</label>
+                        <label style="display: inline-block; margin-right: 15px;"><input type="checkbox" name="days" value="5" checked> Saturday</label>
+                        <label style="display: inline-block; margin-right: 15px;"><input type="checkbox" name="days" value="6" checked> Sunday</label>
+                    </div>
 
                     <label for="start_time">Start Time (UTC):</label>
                     <input type="time" id="start_time" required />
@@ -265,18 +301,44 @@
                     audioListDiv.innerHTML = "";
                     scheduleAudioFileSelect.innerHTML = "";
 
+                    // Add AI Voice Chat option to schedule dropdown
+                    const aiOption = document.createElement("option");
+                    aiOption.value = "AI_VOICE_CHAT";
+                    aiOption.textContent = "AI Voice Chat";
+                    scheduleAudioFileSelect.appendChild(aiOption);
+
+                    // Add AI Voice Chat option to default audio selection
+                    const aiItemDiv = document.createElement("div");
+                    aiItemDiv.className = "audio-item";
+                    const aiRadio = document.createElement("input");
+                    aiRadio.type = "radio";
+                    aiRadio.name = "active_audio";
+                    aiRadio.id = "audio-radio-AI_VOICE_CHAT";
+                    aiRadio.value = "AI_VOICE_CHAT";
+                    if (settings.ACTIVE_AUDIO_FILE === "AI_VOICE_CHAT" || (!settings.ACTIVE_AUDIO_FILE && !files || files.length === 0)) {
+                        aiRadio.checked = true;
+                    }
+                    const aiLabel = document.createElement("label");
+                    aiLabel.htmlFor = "audio-radio-AI_VOICE_CHAT";
+                    aiLabel.textContent = "AI Voice Chat";
+                    aiItemDiv.appendChild(aiRadio);
+                    aiItemDiv.appendChild(aiLabel);
+                    audioListDiv.appendChild(aiItemDiv);
+
                     if (!files || files.length === 0) {
-                        audioListDiv.innerHTML =
-                            "<p>No audio files uploaded.</p>";
-                        const defaultOption = document.createElement("option");
-                        defaultOption.textContent = "No audio files available";
-                        defaultOption.disabled = true;
-                        scheduleAudioFileSelect.appendChild(defaultOption);
                         return;
                     }
 
+                    // Add audio files to schedule dropdown
                     files.forEach((file) => {
-                        // For default audio selection (radio buttons with delete)
+                        const option = document.createElement("option");
+                        option.value = file;
+                        option.textContent = file;
+                        scheduleAudioFileSelect.appendChild(option);
+                    });
+
+                    // Add audio files to default audio selection
+                    files.forEach((file) => {
                         const itemDiv = document.createElement("div");
                         itemDiv.className = "audio-item";
 
@@ -303,18 +365,18 @@
                         itemDiv.appendChild(label);
                         itemDiv.appendChild(deleteBtn);
                         audioListDiv.appendChild(itemDiv);
-
-                        // For schedule form (dropdown)
-                        const option = document.createElement("option");
-                        option.value = file;
-                        option.textContent = file;
-                        scheduleAudioFileSelect.appendChild(option);
                     });
                 }
 
                 function renderSettingsForm(settings) {
                     milNumberInput.value = settings.MIL_NUMBER || "";
                     fallbackNumberInput.value = settings.FALLBACK_NUMBER || "";
+                    
+                    // Render AI settings
+                    const maxTurnsInput = document.getElementById("max_turns");
+                    const langSelect = document.getElementById("lang");
+                    if (maxTurnsInput) maxTurnsInput.value = settings.MAX_TURNS || 3;
+                    if (langSelect) langSelect.value = settings.LANG || "sv";
                 }
 
                 function renderSchedule(schedule) {
@@ -328,7 +390,11 @@
                         const slotDiv = document.createElement("div");
                         slotDiv.className = "slot";
                         const text = document.createElement("span");
-                        text.textContent = `Play "${slot.audio_file}" from ${slot.start_time} to ${slot.end_time}`;
+                        const days = slot.days || [];
+                        const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+                        const dayStr = days.length === 7 ? "Every day" : days.map(d => dayNames[d]).join(", ");
+                        const action = slot.audio_file === "AI_VOICE_CHAT" ? "AI Voice Chat" : `Play "${slot.audio_file}"`;
+                        text.textContent = `${action} from ${slot.start_time} to ${slot.end_time} (${dayStr})`;
                         const deleteBtn = document.createElement("button");
                         deleteBtn.textContent = "Delete";
                         deleteBtn.className = "delete";
@@ -539,6 +605,34 @@
                         });
                 });
 
+                document.getElementById("save-ai-settings-btn").addEventListener("click", () => {
+                    const maxTurnsInput = document.getElementById("max_turns");
+                    const langSelect = document.getElementById("lang");
+                    const newData = {
+                        MAX_TURNS: parseInt(maxTurnsInput.value) || 3,
+                        LANG: langSelect.value || "sv",
+                    };
+
+                    fetch("/settings", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(newData),
+                    })
+                        .then((res) => res.json())
+                        .then((data) => {
+                            if (data.status === "success") {
+                                alert("AI Chat settings saved successfully!");
+                                loadData();
+                            } else {
+                                alert("Error saving AI settings: " + data.message);
+                            }
+                        })
+                        .catch((error) => {
+                            console.error("Error saving AI settings:", error);
+                            alert("Error saving AI settings.");
+                        });
+                });
+
                 audioListDiv.addEventListener("click", (event) => {
                     const target = event.target;
                     if (target.classList.contains("audio-delete")) {
@@ -575,8 +669,14 @@
 
                 scheduleForm.addEventListener("submit", (event) => {
                     event.preventDefault();
+                    const selectedDays = Array.from(document.querySelectorAll('input[name="days"]:checked')).map(cb => parseInt(cb.value));
+                    if (selectedDays.length === 0) {
+                        alert("Please select at least one day of the week.");
+                        return;
+                    }
                     const newSlot = {
                         audio_file: scheduleAudioFileSelect.value,
+                        days: selectedDays,
                         start_time: startTimeInput.value,
                         end_time: endTimeInput.value,
                     };
