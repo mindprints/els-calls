@@ -204,6 +204,9 @@ conversation_manager = AIConversation()
 # --- Configuration & Setup ---
 SETTINGS_FILE = "settings.json"
 AUDIO_DIR = "audio"
+# Ensure AUDIO_DIR exists (needed when running with gunicorn)
+if not os.path.exists(AUDIO_DIR):
+    os.makedirs(AUDIO_DIR)
 try:
     with open(SETTINGS_FILE, "r") as f:
         settings = json.load(f)
