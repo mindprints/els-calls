@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,22 +10,38 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
         /* Custom scrollbar for a premium feel */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
-        
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
         .glass-panel {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(229, 231, 235, 0.5);
         }
-        
+
         .input-field {
             transition: all 0.2s;
         }
+
         .input-field:focus {
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
@@ -34,11 +51,13 @@
             right: 0;
             border-color: #68D391;
         }
-        .toggle-checkbox:checked + .toggle-label {
+
+        .toggle-checkbox:checked+.toggle-label {
             background-color: #68D391;
         }
     </style>
 </head>
+
 <body class="bg-slate-50 text-slate-800 min-h-screen">
 
     <!-- Top Navigation / Header -->
@@ -50,7 +69,8 @@
                     <span class="font-bold text-xl tracking-tight text-slate-900">Call Manager</span>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <div id="save-status" class="text-xs font-medium text-slate-400 uppercase tracking-wider opacity-0 transition-opacity duration-500">
+                    <div id="save-status"
+                        class="text-xs font-medium text-slate-400 uppercase tracking-wider opacity-0 transition-opacity duration-500">
                         All changes saved
                     </div>
                 </div>
@@ -59,12 +79,12 @@
     </nav>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
+
             <!-- LEFT COLUMN: Settings & Schedule -->
             <div class="lg:col-span-7 space-y-8">
-                
+
                 <!-- General Settings -->
                 <section class="glass-panel rounded-2xl shadow-sm p-6">
                     <div class="flex items-center mb-6">
@@ -73,7 +93,7 @@
                         </div>
                         <h2 class="text-lg font-semibold text-slate-900">General Configuration</h2>
                     </div>
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-2">MIL Number</label>
@@ -81,7 +101,9 @@
                                 <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
                                     <i class="fa-solid fa-phone"></i>
                                 </span>
-                                <input type="text" id="mil_number" class="input-field pl-10 w-full rounded-lg border-slate-300 border p-2.5 text-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="+46...">
+                                <input type="text" id="mil_number"
+                                    class="input-field pl-10 w-full rounded-lg border-slate-300 border p-2.5 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="+46...">
                             </div>
                         </div>
                         <div>
@@ -90,7 +112,9 @@
                                 <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
                                     <i class="fa-solid fa-share"></i>
                                 </span>
-                                <input type="text" id="fallback_number" class="input-field pl-10 w-full rounded-lg border-slate-300 border p-2.5 text-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="+46...">
+                                <input type="text" id="fallback_number"
+                                    class="input-field pl-10 w-full rounded-lg border-slate-300 border p-2.5 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="+46...">
                             </div>
                         </div>
                     </div>
@@ -108,11 +132,13 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-2">Max Conversation Turns</label>
-                            <input type="number" id="max_turns" min="1" max="10" class="input-field w-full rounded-lg border-slate-300 border p-2.5 text-sm focus:ring-purple-500 focus:border-purple-500">
+                            <input type="number" id="max_turns" min="1" max="10"
+                                class="input-field w-full rounded-lg border-slate-300 border p-2.5 text-sm focus:ring-purple-500 focus:border-purple-500">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-2">Language</label>
-                            <select id="lang" class="input-field w-full rounded-lg border-slate-300 border p-2.5 text-sm focus:ring-purple-500 focus:border-purple-500 bg-white">
+                            <select id="lang"
+                                class="input-field w-full rounded-lg border-slate-300 border p-2.5 text-sm focus:ring-purple-500 focus:border-purple-500 bg-white">
                                 <option value="sv">🇸🇪 Swedish</option>
                                 <option value="en">🇬🇧 English</option>
                                 <option value="no">🇳🇴 Norwegian</option>
@@ -131,68 +157,87 @@
                             </div>
                             <h2 class="text-lg font-semibold text-slate-900">Schedule</h2>
                         </div>
-                        <button onclick="toggleScheduleForm()" class="text-sm bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-3 py-1.5 rounded-md font-medium transition-colors">
+                        <button onclick="toggleScheduleForm()"
+                            class="text-sm bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-3 py-1.5 rounded-md font-medium transition-colors">
                             <i class="fa-solid fa-plus mr-1"></i> Add Rule
                         </button>
                     </div>
 
                     <!-- Add Schedule Form (Hidden by default) -->
-                    <div id="schedule-form-container" class="hidden bg-slate-50 rounded-xl p-4 mb-6 border border-slate-200">
+                    <div id="schedule-form-container"
+                        class="hidden bg-slate-50 rounded-xl p-4 mb-6 border border-slate-200">
                         <form id="schedule-form" onsubmit="return false;">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                 <div class="md:col-span-2">
-                                    <label class="block text-xs font-medium text-slate-500 uppercase mb-1">Action</label>
-                                    <select id="schedule_audio_file" class="w-full rounded-md border-slate-300 text-sm p-2">
+                                    <label
+                                        class="block text-xs font-medium text-slate-500 uppercase mb-1">Action</label>
+                                    <select id="schedule_audio_file"
+                                        class="w-full rounded-md border-slate-300 text-sm p-2">
                                         <option value="AI_VOICE_CHAT">🤖 AI Voice Chat</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-slate-500 uppercase mb-1">Start Time</label>
-                                    <input type="time" id="start_time" required class="w-full rounded-md border-slate-300 text-sm p-2">
+                                    <label class="block text-xs font-medium text-slate-500 uppercase mb-1">Start
+                                        Time</label>
+                                    <input type="time" id="start_time" required
+                                        class="w-full rounded-md border-slate-300 text-sm p-2">
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-slate-500 uppercase mb-1">End Time</label>
-                                    <input type="time" id="end_time" required class="w-full rounded-md border-slate-300 text-sm p-2">
+                                    <label class="block text-xs font-medium text-slate-500 uppercase mb-1">End
+                                        Time</label>
+                                    <input type="time" id="end_time" required
+                                        class="w-full rounded-md border-slate-300 text-sm p-2">
                                 </div>
                             </div>
-                            
+
                             <div class="mb-4">
-                                <label class="block text-xs font-medium text-slate-500 uppercase mb-2">Days Active</label>
+                                <label class="block text-xs font-medium text-slate-500 uppercase mb-2">Days
+                                    Active</label>
                                 <div class="flex flex-wrap gap-2">
                                     <label class="cursor-pointer">
                                         <input type="checkbox" name="days" value="0" checked class="peer sr-only">
-                                        <span class="px-3 py-1 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-500 peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:border-emerald-500 transition-all select-none">Mon</span>
+                                        <span
+                                            class="px-3 py-1 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-500 peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:border-emerald-500 transition-all select-none">Mon</span>
                                     </label>
                                     <label class="cursor-pointer">
                                         <input type="checkbox" name="days" value="1" checked class="peer sr-only">
-                                        <span class="px-3 py-1 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-500 peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:border-emerald-500 transition-all select-none">Tue</span>
+                                        <span
+                                            class="px-3 py-1 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-500 peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:border-emerald-500 transition-all select-none">Tue</span>
                                     </label>
                                     <label class="cursor-pointer">
                                         <input type="checkbox" name="days" value="2" checked class="peer sr-only">
-                                        <span class="px-3 py-1 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-500 peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:border-emerald-500 transition-all select-none">Wed</span>
+                                        <span
+                                            class="px-3 py-1 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-500 peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:border-emerald-500 transition-all select-none">Wed</span>
                                     </label>
                                     <label class="cursor-pointer">
                                         <input type="checkbox" name="days" value="3" checked class="peer sr-only">
-                                        <span class="px-3 py-1 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-500 peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:border-emerald-500 transition-all select-none">Thu</span>
+                                        <span
+                                            class="px-3 py-1 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-500 peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:border-emerald-500 transition-all select-none">Thu</span>
                                     </label>
                                     <label class="cursor-pointer">
                                         <input type="checkbox" name="days" value="4" checked class="peer sr-only">
-                                        <span class="px-3 py-1 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-500 peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:border-emerald-500 transition-all select-none">Fri</span>
+                                        <span
+                                            class="px-3 py-1 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-500 peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:border-emerald-500 transition-all select-none">Fri</span>
                                     </label>
                                     <label class="cursor-pointer">
                                         <input type="checkbox" name="days" value="5" checked class="peer sr-only">
-                                        <span class="px-3 py-1 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-500 peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:border-emerald-500 transition-all select-none">Sat</span>
+                                        <span
+                                            class="px-3 py-1 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-500 peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:border-emerald-500 transition-all select-none">Sat</span>
                                     </label>
                                     <label class="cursor-pointer">
                                         <input type="checkbox" name="days" value="6" checked class="peer sr-only">
-                                        <span class="px-3 py-1 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-500 peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:border-emerald-500 transition-all select-none">Sun</span>
+                                        <span
+                                            class="px-3 py-1 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-500 peer-checked:bg-emerald-500 peer-checked:text-white peer-checked:border-emerald-500 transition-all select-none">Sun</span>
                                     </label>
                                 </div>
                             </div>
 
                             <div class="flex justify-end gap-2">
-                                <button onclick="toggleScheduleForm()" class="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">Cancel</button>
-                                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors">Save Rule</button>
+                                <button onclick="toggleScheduleForm()"
+                                    class="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">Cancel</button>
+                                <button type="submit"
+                                    class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md text-sm font-medium shadow-sm transition-colors">Save
+                                    Rule</button>
                             </div>
                         </form>
                     </div>
@@ -213,7 +258,7 @@
 
             <!-- RIGHT COLUMN: Audio Management -->
             <div class="lg:col-span-5 space-y-8">
-                
+
                 <!-- Audio Library -->
                 <section class="glass-panel rounded-2xl shadow-sm p-6 flex flex-col h-full">
                     <div class="flex items-center mb-6">
@@ -225,14 +270,18 @@
 
                     <!-- Tabs -->
                     <div class="flex border-b border-slate-200 mb-6">
-                        <button onclick="switchTab('library')" id="tab-library" class="flex-1 pb-3 text-sm font-medium text-rose-600 border-b-2 border-rose-600">Library</button>
-                        <button onclick="switchTab('upload')" id="tab-upload" class="flex-1 pb-3 text-sm font-medium text-slate-500 hover:text-slate-700">Upload</button>
-                        <button onclick="switchTab('record')" id="tab-record" class="flex-1 pb-3 text-sm font-medium text-slate-500 hover:text-slate-700">Record</button>
+                        <button onclick="switchTab('library')" id="tab-library"
+                            class="flex-1 pb-3 text-sm font-medium text-rose-600 border-b-2 border-rose-600">Library</button>
+                        <button onclick="switchTab('upload')" id="tab-upload"
+                            class="flex-1 pb-3 text-sm font-medium text-slate-500 hover:text-slate-700">Upload</button>
+                        <button onclick="switchTab('record')" id="tab-record"
+                            class="flex-1 pb-3 text-sm font-medium text-slate-500 hover:text-slate-700">Record</button>
                     </div>
 
                     <!-- Tab Content: Library -->
                     <div id="content-library" class="space-y-4">
-                        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Default Active Audio</div>
+                        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Default Active
+                            Audio</div>
                         <div id="audio-list" class="space-y-2">
                             <!-- Audio items injected here -->
                         </div>
@@ -240,13 +289,14 @@
 
                     <!-- Tab Content: Upload -->
                     <div id="content-upload" class="hidden">
-                        <div class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer" onclick="document.getElementById('audio_file').click()">
+                        <div class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer"
+                            onclick="document.getElementById('audio_file').click()">
                             <i class="fa-solid fa-cloud-arrow-up text-4xl text-slate-300 mb-3"></i>
                             <p class="text-sm text-slate-600 font-medium">Click to upload MP3</p>
                             <p class="text-xs text-slate-400 mt-1">Max 10MB</p>
                             <input type="file" id="audio_file" accept="audio/mpeg" class="hidden">
                         </div>
-                        
+
                         <!-- Upload Progress -->
                         <div id="upload-progress-container" class="hidden mt-4">
                             <div class="flex justify-between text-xs mb-1">
@@ -254,14 +304,16 @@
                                 <span id="upload-percentage" class="text-slate-500">0%</span>
                             </div>
                             <div class="w-full bg-slate-200 rounded-full h-2">
-                                <div id="upload-bar" class="bg-rose-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                                <div id="upload-bar" class="bg-rose-500 h-2 rounded-full transition-all duration-300"
+                                    style="width: 0%"></div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Tab Content: Record -->
                     <div id="content-record" class="hidden flex flex-col items-center justify-center py-4">
-                        <div id="record-visualizer" class="h-24 w-full bg-slate-100 rounded-xl mb-6 flex items-center justify-center overflow-hidden relative">
+                        <div id="record-visualizer"
+                            class="h-24 w-full bg-slate-100 rounded-xl mb-6 flex items-center justify-center overflow-hidden relative">
                             <div class="absolute inset-0 flex items-center justify-center space-x-1" id="wave-bars">
                                 <!-- Bars generated by JS -->
                             </div>
@@ -269,24 +321,29 @@
                         </div>
 
                         <div class="flex gap-4">
-                            <button id="start-record-btn" class="w-16 h-16 rounded-full bg-rose-500 hover:bg-rose-600 text-white shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
+                            <button id="start-record-btn"
+                                class="w-16 h-16 rounded-full bg-rose-500 hover:bg-rose-600 text-white shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
                                 <i class="fa-solid fa-microphone text-2xl"></i>
                             </button>
-                            <button id="stop-record-btn" disabled class="hidden w-16 h-16 rounded-full bg-slate-800 hover:bg-slate-900 text-white shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
+                            <button id="stop-record-btn" disabled
+                                class="hidden w-16 h-16 rounded-full bg-slate-800 hover:bg-slate-900 text-white shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
                                 <i class="fa-solid fa-stop text-2xl"></i>
                             </button>
                         </div>
-                        
+
                         <p id="record-status" class="mt-4 text-sm text-slate-500 font-medium">Ready to record</p>
 
                         <!-- Preview & Save -->
-                        <div id="preview-container" class="hidden w-full mt-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <div id="preview-container"
+                            class="hidden w-full mt-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
                             <div class="flex items-center justify-between mb-3">
                                 <span class="text-xs font-bold text-slate-400 uppercase">Preview</span>
-                                <button id="discard-record-btn" class="text-xs text-red-500 hover:text-red-700 font-medium">Discard</button>
+                                <button id="discard-record-btn"
+                                    class="text-xs text-red-500 hover:text-red-700 font-medium">Discard</button>
                             </div>
                             <audio id="preview-player" controls class="w-full h-8 mb-4"></audio>
-                            <button id="save-record-btn" class="w-full bg-rose-600 hover:bg-rose-700 text-white py-2 rounded-lg text-sm font-medium shadow-sm">
+                            <button id="save-record-btn"
+                                class="w-full bg-rose-600 hover:bg-rose-700 text-white py-2 rounded-lg text-sm font-medium shadow-sm">
                                 Save Recording
                             </button>
                         </div>
@@ -357,14 +414,14 @@
             // General
             document.getElementById('mil_number').value = currentSettings.MIL_NUMBER || '';
             document.getElementById('fallback_number').value = currentSettings.FALLBACK_NUMBER || '';
-            
+
             // AI
             document.getElementById('max_turns').value = currentSettings.MAX_TURNS || 3;
             document.getElementById('lang').value = currentSettings.LANG || 'sv';
 
             // Audio List
             renderAudioList();
-            
+
             // Schedule
             renderSchedule();
         }
@@ -388,12 +445,12 @@
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(newData)
                 })
-                .then(res => res.json())
-                .then(data => {
-                    if(data.status === 'success') showStatus('Changes saved');
-                    else showStatus('Save failed', 'error');
-                })
-                .catch(() => showStatus('Network error', 'error'));
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'success') showStatus('Changes saved');
+                        else showStatus('Save failed', 'error');
+                    })
+                    .catch(() => showStatus('Network error', 'error'));
             }, 500);
 
             // Attach listeners
@@ -407,17 +464,17 @@
         function renderAudioList() {
             const container = document.getElementById('audio-list');
             const scheduleSelect = document.getElementById('schedule_audio_file');
-            
+
             container.innerHTML = '';
             scheduleSelect.innerHTML = '<option value="AI_VOICE_CHAT">🤖 AI Voice Chat</option>';
 
             // Helper to create row
             const createRow = (value, label, isAi = false) => {
                 const isChecked = currentSettings.ACTIVE_AUDIO_FILE === value || (!currentSettings.ACTIVE_AUDIO_FILE && isAi);
-                
+
                 const div = document.createElement('div');
                 div.className = `flex items-center justify-between p-3 rounded-lg border ${isChecked ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'} transition-colors`;
-                
+
                 div.innerHTML = `
                     <div class="flex items-center flex-1 min-w-0">
                         <input type="radio" name="active_audio" value="${value}" ${isChecked ? 'checked' : ''} class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300">
@@ -436,7 +493,7 @@
                         ` : '<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Default</span>'}
                     </div>
                 `;
-                
+
                 // Add change listener manually to the radio
                 const radio = div.querySelector('input[type="radio"]');
                 radio.addEventListener('change', () => {
@@ -447,7 +504,7 @@
                     });
                     div.className = div.className.replace('border-slate-200 bg-white', 'border-indigo-500 bg-indigo-50');
                     div.querySelector('span').className = div.querySelector('span').className.replace('text-slate-700', 'text-indigo-900');
-                    
+
                     // Trigger save
                     const event = new Event('input');
                     document.getElementById('mil_number').dispatchEvent(event); // Re-use existing saver
@@ -462,7 +519,7 @@
             // Files
             audioFiles.forEach(file => {
                 container.appendChild(createRow(file, file));
-                
+
                 // Add to schedule dropdown
                 const opt = document.createElement('option');
                 opt.value = file;
@@ -499,11 +556,11 @@
         };
 
         window.deleteAudio = (filename) => {
-            if(!confirm(`Delete ${filename}?`)) return;
+            if (!confirm(`Delete ${filename}?`)) return;
             fetch(`/audio/${filename}`, { method: 'DELETE' })
                 .then(res => res.json())
                 .then(data => {
-                    if(data.status === 'success') {
+                    if (data.status === 'success') {
                         loadData();
                         showStatus('File deleted');
                     } else {
@@ -516,7 +573,7 @@
         function setupUpload() {
             const input = document.getElementById('audio_file');
             input.addEventListener('change', () => {
-                if(input.files.length > 0) uploadFile(input.files[0]);
+                if (input.files.length > 0) uploadFile(input.files[0]);
             });
         }
 
@@ -572,8 +629,21 @@
             const saveBtn = document.getElementById('save-record-btn');
             const discardBtn = document.getElementById('discard-record-btn');
 
+            // Check for HTTPS or localhost
+            if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                document.getElementById('content-record').innerHTML = `
+                    <div class="text-center p-6 bg-amber-50 rounded-xl border border-amber-200">
+                        <i class="fa-solid fa-lock text-3xl text-amber-500 mb-3"></i>
+                        <h3 class="text-lg font-medium text-amber-800 mb-2">Secure Connection Required</h3>
+                        <p class="text-sm text-amber-700">Microphone access requires HTTPS. Please access this dashboard via a secure connection.</p>
+                    </div>
+                `;
+                return;
+            }
+
             startBtn.addEventListener('click', async () => {
                 try {
+                    // Explicitly request permissions if not already granted
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     mediaRecorder = new MediaRecorder(stream);
                     audioChunks = [];
@@ -596,13 +666,16 @@
                     startWaveAnimation();
 
                 } catch (err) {
-                    alert('Microphone access denied');
+                    console.error("Mic Error:", err);
+                    alert('Microphone access denied. Please allow microphone access in your browser settings.');
                 }
             });
 
             stopBtn.addEventListener('click', () => {
-                mediaRecorder.stop();
-                mediaRecorder.stream.getTracks().forEach(t => t.stop());
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                    mediaRecorder.stream.getTracks().forEach(t => t.stop());
+                }
                 stopBtn.classList.add('hidden');
                 startBtn.classList.remove('hidden');
                 stopTimer();
@@ -612,18 +685,21 @@
                 document.getElementById('preview-container').classList.add('hidden');
                 document.getElementById('record-status').textContent = 'Ready to record';
                 document.getElementById('record-timer').textContent = '00:00';
+                if (document.getElementById('preview-player').src) {
+                    URL.revokeObjectURL(document.getElementById('preview-player').src);
+                    document.getElementById('preview-player').src = '';
+                }
             });
 
             saveBtn.addEventListener('click', () => {
                 const name = prompt('Filename (without .mp3):');
-                if(!name) return;
-                
+                if (!name) return;
+
                 saveBtn.textContent = 'Processing...';
                 saveBtn.disabled = true;
 
-                // Decode and Encode to MP3 (simplified for brevity, using same logic as before but cleaner)
                 const reader = new FileReader();
-                reader.onload = function(event) {
+                reader.onload = function (event) {
                     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     audioContext.decodeAudioData(event.target.result).then(buffer => {
                         const mp3encoder = new lamejs.Mp3Encoder(1, buffer.sampleRate, 128);
@@ -637,19 +713,65 @@
                         }
                         const end = mp3encoder.flush();
                         if (end.length > 0) mp3Data.push(end);
-                        
+
                         const mp3Blob = new Blob(mp3Data, { type: 'audio/mpeg' });
-                        
-                        // Use existing upload function
-                        // Create a File object from Blob
                         const file = new File([mp3Blob], name + '.mp3', { type: 'audio/mpeg' });
-                        uploadFile(file);
-                        
-                        // Reset UI
-                        saveBtn.textContent = 'Save Recording';
-                        saveBtn.disabled = false;
-                        discardBtn.click();
-                        switchTab('upload'); // Switch to see progress
+
+                        // Manually trigger upload logic to ensure UI updates
+                        const formData = new FormData();
+                        formData.append('audio_file', file);
+
+                        const xhr = new XMLHttpRequest();
+                        // Re-use upload progress UI
+                        const progressBar = document.getElementById('upload-bar');
+                        const progressText = document.getElementById('upload-percentage');
+                        const progressContainer = document.getElementById('upload-progress-container');
+
+                        // Switch tab to show progress
+                        switchTab('upload');
+                        progressContainer.classList.remove('hidden');
+
+                        xhr.upload.addEventListener('progress', (e) => {
+                            if (e.lengthComputable) {
+                                const percent = Math.round((e.loaded / e.total) * 100);
+                                progressBar.style.width = percent + '%';
+                                progressText.textContent = percent + '%';
+                            }
+                        });
+
+                        xhr.onreadystatechange = () => {
+                            if (xhr.readyState === 4) {
+                                if (xhr.status === 200) {
+                                    const data = JSON.parse(xhr.responseText);
+                                    if (data.status === 'success') {
+                                        showStatus('Recording saved');
+                                        loadData();
+                                        switchTab('library');
+
+                                        // Reset Recorder UI
+                                        saveBtn.textContent = 'Save Recording';
+                                        saveBtn.disabled = false;
+                                        discardBtn.click();
+                                    } else {
+                                        alert('Save failed: ' + data.message);
+                                        switchTab('record'); // Go back to record tab on failure
+                                        saveBtn.textContent = 'Save Recording';
+                                        saveBtn.disabled = false;
+                                    }
+                                } else {
+                                    alert('Save failed');
+                                    switchTab('record');
+                                    saveBtn.textContent = 'Save Recording';
+                                    saveBtn.disabled = false;
+                                }
+                                setTimeout(() => {
+                                    progressContainer.classList.add('hidden');
+                                    progressBar.style.width = '0%';
+                                }, 1000);
+                            }
+                        };
+                        xhr.open('POST', '/upload_audio', true);
+                        xhr.send(formData);
                     });
                 };
                 reader.readAsArrayBuffer(audioBlob);
@@ -673,7 +795,7 @@
         function startWaveAnimation() {
             const container = document.getElementById('wave-bars');
             container.innerHTML = '';
-            for(let i=0; i<20; i++) {
+            for (let i = 0; i < 20; i++) {
                 const bar = document.createElement('div');
                 bar.className = 'w-1 bg-rose-400 rounded-full animate-pulse';
                 bar.style.height = '20%';
@@ -697,8 +819,8 @@
         function renderSchedule() {
             const list = document.getElementById('schedule-list');
             const schedule = currentSettings.SCHEDULE || [];
-            
-            if(schedule.length === 0) {
+
+            if (schedule.length === 0) {
                 list.innerHTML = '<div class="text-center text-slate-400 py-4 text-sm">No active schedule rules</div>';
                 return;
             }
@@ -740,7 +862,7 @@
         document.getElementById('schedule-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const selectedDays = Array.from(document.querySelectorAll('input[name="days"]:checked')).map(cb => parseInt(cb.value));
-            if(selectedDays.length === 0) { alert('Select at least one day'); return; }
+            if (selectedDays.length === 0) { alert('Select at least one day'); return; }
 
             const newSlot = {
                 audio_file: document.getElementById('schedule_audio_file').value,
@@ -754,30 +876,30 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(newSlot)
             })
-            .then(res => res.json())
-            .then(data => {
-                if(data.status === 'success') {
-                    currentSettings.SCHEDULE = data.schedule;
-                    renderSchedule();
-                    toggleScheduleForm();
-                    showStatus('Rule added');
-                } else {
-                    alert(data.message);
-                }
-            });
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        currentSettings.SCHEDULE = data.schedule;
+                        renderSchedule();
+                        toggleScheduleForm();
+                        showStatus('Rule added');
+                    } else {
+                        alert(data.message);
+                    }
+                });
         });
 
         window.deleteSchedule = (index) => {
-            if(!confirm('Delete this rule?')) return;
+            if (!confirm('Delete this rule?')) return;
             fetch(`/schedule/${index}`, { method: 'DELETE' })
-            .then(res => res.json())
-            .then(data => {
-                if(data.status === 'success') {
-                    currentSettings.SCHEDULE = data.schedule;
-                    renderSchedule();
-                    showStatus('Rule deleted');
-                }
-            });
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        currentSettings.SCHEDULE = data.schedule;
+                        renderSchedule();
+                        showStatus('Rule deleted');
+                    }
+                });
         };
 
         // --- TABS ---
@@ -785,7 +907,7 @@
             ['library', 'upload', 'record'].forEach(t => {
                 const btn = document.getElementById(`tab-${t}`);
                 const content = document.getElementById(`content-${t}`);
-                
+
                 if (t === tab) {
                     btn.className = 'flex-1 pb-3 text-sm font-medium text-rose-600 border-b-2 border-rose-600';
                     content.classList.remove('hidden');
@@ -798,4 +920,5 @@
 
     </script>
 </body>
+
 </html>
