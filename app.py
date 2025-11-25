@@ -225,6 +225,35 @@ def _get_active_schedule_slot():
             print(f"Skipping invalid schedule slot: {slot}. Error: {e}", flush=True)
     return None
 
+from functools import wraps
+
+# --- Authentication ---
+APP_USER = os.getenv("APP_USER", "admin")
+APP_PASSWORD = os.getenv("APP_PASSWORD", "password")
+
+def auth_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.headers.get('Authorization')
+        if not auth:
+            response.status = 401
+            response.headers['WWW-Authenticate'] = 'Basic realm="Login Required"'
+            return 'Unauthorized'
+
+        try:
+            user, pwd = request.auth
+            if user != APP_USER or pwd != APP_PASSWORD:
+                response.status = 401
+                response.headers['WWW-Authenticate'] = 'Basic realm="Login Required"'
+                return "Authentication failed."
+        except (TypeError, ValueError):
+            response.status = 401
+            response.headers['WWW-Authenticate'] = 'Basic realm="Login Required"'
+            return "Invalid authentication."
+
+        return f(*args, **kwargs)
+    return decorated
+
 # --- Static & UI Endpoints ---
 @app.get("/")
 @auth_required
@@ -288,34 +317,7 @@ def calls():
         # Return a safe fallback to prevent 46elks error
         return {"hangup": "error"}
 
-from functools import wraps
 
-# --- Authentication ---
-APP_USER = os.getenv("APP_USER", "admin")
-APP_PASSWORD = os.getenv("APP_PASSWORD", "password")
-
-def auth_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        auth = request.headers.get('Authorization')
-        if not auth:
-            response.status = 401
-            response.headers['WWW-Authenticate'] = 'Basic realm="Login Required"'
-            return 'Unauthorized'
-
-        try:
-            user, pwd = request.auth
-            if user != APP_USER or pwd != APP_PASSWORD:
-                response.status = 401
-                response.headers['WWW-Authenticate'] = 'Basic realm="Login Required"'
-                return "Authentication failed."
-        except (TypeError, ValueError):
-            response.status = 401
-            response.headers['WWW-Authenticate'] = 'Basic realm="Login Required"'
-            return "Invalid authentication."
-
-        return f(*args, **kwargs)
-    return decorated
 
 # --- Settings & Configuration API ---
 @app.get("/settings")
