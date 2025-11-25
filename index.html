@@ -661,6 +661,7 @@
                     mediaRecorder.start();
                     startBtn.classList.add('hidden');
                     stopBtn.classList.remove('hidden');
+                    stopBtn.disabled = false;
                     document.getElementById('record-status').textContent = 'Recording...';
                     startTimer();
                     startWaveAnimation();
