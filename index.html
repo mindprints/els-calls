@@ -596,11 +596,6 @@
                 }
             });
 
-            xhr.onerror = () => {
-                alert('Network error during upload');
-                progressContainer.classList.add('hidden');
-            };
-
             xhr.onreadystatechange = () => {
                 if (xhr.readyState === 4) {
                     if (xhr.status === 200) {
@@ -666,7 +661,6 @@
                     mediaRecorder.start();
                     startBtn.classList.add('hidden');
                     stopBtn.classList.remove('hidden');
-                    stopBtn.disabled = false; // Enable the stop button
                     document.getElementById('record-status').textContent = 'Recording...';
                     startTimer();
                     startWaveAnimation();
@@ -682,7 +676,6 @@
                     mediaRecorder.stop();
                     mediaRecorder.stream.getTracks().forEach(t => t.stop());
                 }
-                stopBtn.disabled = true; // Disable until next record
                 stopBtn.classList.add('hidden');
                 startBtn.classList.remove('hidden');
                 stopTimer();
@@ -745,11 +738,6 @@
                                 progressText.textContent = percent + '%';
                             }
                         });
-
-                        xhr.onerror = () => {
-                            alert('Network error during upload');
-                            progressContainer.classList.add('hidden');
-                        };
 
                         xhr.onreadystatechange = () => {
                             if (xhr.readyState === 4) {

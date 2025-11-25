@@ -1,9 +1,10 @@
 {
-  "MIL_NUMBER": "+46705152223",
-  "FALLBACK_NUMBER": "+46733466657",
-  "ACTIVE_AUDIO_FILE": "hello.mp3",
-  "SCHEDULE": [],
-  "MAX_TURNS": 3,
-  "LANG": "sv",
-  "AI_REPLIES_ENABLED": true
+    "MIL_NUMBER": "+46705152223",
+    "FALLBACK_NUMBER": "+46733466657",
+    "ACTIVE_AUDIO_FILE": "hello.mp3",
+    "SCHEDULE": [],
+    "MAX_TURNS": 3,
+    "LANG": "sv",
+    "AI_REPLIES_ENABLED": true,
+    "NAMED_NUMBERS": []
 }
