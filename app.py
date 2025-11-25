@@ -5,12 +5,19 @@ from datetime import datetime, time as time_obj
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    def load_dotenv(): pass
+
 import requests
 from bottle import Bottle, request, response, static_file
 
 # Load environment variables from .env file (for API keys, etc.)
-load_dotenv()
+try:
+    load_dotenv()
+except Exception as e:
+    print(f"Warning: Failed to load .env file: {e}")
 
 app = Bottle()
 
@@ -231,41 +238,51 @@ def serve_audio(filename: str):
 # --- Core API ---
 @app.post("/calls")
 def calls():
-    from_number = (request.forms.get("from") or "").replace(" ", "")
-    if from_number != settings.get("MIL_NUMBER"):
-        return {"connect": settings.get("FALLBACK_NUMBER", "")}
+    try:
+        print(f"📞 Incoming call request: {dict(request.forms)}")
+        
+        from_number = (request.forms.get("from") or "").replace(" ", "")
+        if from_number != settings.get("MIL_NUMBER"):
+            print(f"Redirecting {from_number} to fallback")
+            return {"connect": settings.get("FALLBACK_NUMBER", "")}
 
-    active_slot = _get_active_schedule_slot()
-    action = active_slot.get('audio_file', 'AI_VOICE_CHAT') if active_slot else settings.get("ACTIVE_AUDIO_FILE", "AI_VOICE_CHAT")
+        active_slot = _get_active_schedule_slot()
+        action = active_slot.get('audio_file', 'AI_VOICE_CHAT') if active_slot else settings.get("ACTIVE_AUDIO_FILE", "AI_VOICE_CHAT")
+        
+        print(f"Action determined: {action}")
 
-    if action != 'AI_VOICE_CHAT':
-        if os.path.isfile(os.path.join(AUDIO_DIR, action)):
-            return {"play": f"https://calls.mtup.xyz/audio/{action}"}
+        if action != 'AI_VOICE_CHAT':
+            if os.path.isfile(os.path.join(AUDIO_DIR, action)):
+                return {"play": f"https://calls.mtup.xyz/audio/{action}"}
+            return {"hangup": ""}
+
+        # AI Conversation Flow
+        call_id = request.forms.get("callid")
+        mode = request.query.get("mode")
+        base_url = "https://calls.mtup.xyz"
+        max_turns = settings.get("MAX_TURNS", 3)
+
+        if not mode:
+            return {"play": f"{base_url}/audio/hello.mp3", "skippable": False, "next": f"{base_url}/calls?mode=record1&callid={call_id}"}
+        elif mode.startswith("record"):
+            turn = int(mode.replace("record", ""))
+            return {"record": f"{base_url}/recordings", "silencedetection": "yes", "timelimit": 12, "next": f"{base_url}/calls?mode=reply{turn}&callid={call_id}"}
+        elif mode.startswith("reply"):
+            turn = int(mode.replace("reply", ""))
+            reply_file = f"reply-{call_id}-{turn}.mp3"
+            if os.path.exists(os.path.join(AUDIO_DIR, reply_file)):
+                response_data = {"play": f"{base_url}/audio/{reply_file}"}
+                response_data["next"] = f"{base_url}/calls?mode=record{turn + 1}&callid={call_id}" if turn < max_turns else f"{base_url}/calls?mode=closing&callid={call_id}"
+                return response_data
+            else:
+                return {"play": f"{base_url}/audio/waiting.mp3", "next": f"{base_url}/calls?mode=reply{turn}&callid={call_id}"}
+        elif mode == "closing":
+            return {"play": f"{base_url}/audio/goodbye.mp3"}
         return {"hangup": ""}
-
-    # AI Conversation Flow
-    call_id = request.forms.get("callid")
-    mode = request.query.get("mode")
-    base_url = "https://calls.mtup.xyz"
-    max_turns = settings.get("MAX_TURNS", 3)
-
-    if not mode:
-        return {"play": f"{base_url}/audio/hello.mp3", "skippable": False, "next": f"{base_url}/calls?mode=record1&callid={call_id}"}
-    elif mode.startswith("record"):
-        turn = int(mode.replace("record", ""))
-        return {"record": f"{base_url}/recordings", "silencedetection": "yes", "timelimit": 12, "next": f"{base_url}/calls?mode=reply{turn}&callid={call_id}"}
-    elif mode.startswith("reply"):
-        turn = int(mode.replace("reply", ""))
-        reply_file = f"reply-{call_id}-{turn}.mp3"
-        if os.path.exists(os.path.join(AUDIO_DIR, reply_file)):
-            response_data = {"play": f"{base_url}/audio/{reply_file}"}
-            response_data["next"] = f"{base_url}/calls?mode=record{turn + 1}&callid={call_id}" if turn < max_turns else f"{base_url}/calls?mode=closing&callid={call_id}"
-            return response_data
-        else:
-            return {"play": f"{base_url}/audio/waiting.mp3", "next": f"{base_url}/calls?mode=reply{turn}&callid={call_id}"}
-    elif mode == "closing":
-        return {"play": f"{base_url}/audio/goodbye.mp3"}
-    return {"hangup": ""}
+    except Exception as e:
+        print(f"❌ Error in calls endpoint: {e}")
+        # Return a safe fallback to prevent 46elks error
+        return {"hangup": "error"}
 
 # --- Settings & Configuration API ---
 @app.get("/settings")
