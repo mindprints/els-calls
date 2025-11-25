@@ -687,11 +687,110 @@
                 document.getElementById('record-status').textContent = 'Ready to record';
                 document.getElementById('record-timer').textContent = '00:00';
                 if (document.getElementById('preview-player').src) {
-                    const diff = Math.floor((Date.now() - recordStartTime) / 1000);
-                    const m = Math.floor(diff / 60).toString().padStart(2, '0');
-                    const s = (diff % 60).toString().padStart(2, '0');
-                    document.getElementById('record-timer').textContent = `${m}:${s}`;
-                }, 1000);
+                    URL.revokeObjectURL(document.getElementById('preview-player').src);
+                    document.getElementById('preview-player').src = '';
+                }
+            });
+
+            saveBtn.addEventListener('click', () => {
+                const name = prompt('Filename (without .mp3):');
+                if (!name) return;
+
+                saveBtn.textContent = 'Processing...';
+                saveBtn.disabled = true;
+
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    audioContext.decodeAudioData(event.target.result).then(buffer => {
+                        const mp3encoder = new lamejs.Mp3Encoder(1, buffer.sampleRate, 128);
+
+                        // Convert Float32 to Int16
+                        const samplesFloat = buffer.getChannelData(0);
+                        const samples = new Int16Array(samplesFloat.length);
+                        for (let i = 0; i < samplesFloat.length; i++) {
+                            const s = Math.max(-1, Math.min(1, samplesFloat[i]));
+                            samples[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                        }
+
+                        const mp3Data = [];
+                        const sampleBlockSize = 1152;
+                        for (let i = 0; i < samples.length; i += sampleBlockSize) {
+                            const sampleChunk = samples.subarray(i, i + sampleBlockSize);
+                            const mp3buf = mp3encoder.encodeBuffer(sampleChunk);
+                            if (mp3buf.length > 0) mp3Data.push(mp3buf);
+                        }
+                        const end = mp3encoder.flush();
+                        if (end.length > 0) mp3Data.push(end);
+
+                        const mp3Blob = new Blob(mp3Data, { type: 'audio/mpeg' });
+                        const file = new File([mp3Blob], name + '.mp3', { type: 'audio/mpeg' });
+
+                        // Upload logic
+                        const formData = new FormData();
+                        formData.append('audio_file', file);
+
+                        const xhr = new XMLHttpRequest();
+                        const progressBar = document.getElementById('upload-bar');
+                        const progressText = document.getElementById('upload-percentage');
+                        const progressContainer = document.getElementById('upload-progress-container');
+
+                        switchTab('upload');
+                        progressContainer.classList.remove('hidden');
+
+                        xhr.upload.addEventListener('progress', (e) => {
+                            if (e.lengthComputable) {
+                                const percent = Math.round((e.loaded / e.total) * 100);
+                                progressBar.style.width = percent + '%';
+                                progressText.textContent = percent + '%';
+                            }
+                        });
+
+                        xhr.onreadystatechange = () => {
+                            if (xhr.readyState === 4) {
+                                if (xhr.status === 200) {
+                                    const data = JSON.parse(xhr.responseText);
+                                    if (data.status === 'success') {
+                                        showStatus('Recording saved');
+                                        loadData();
+                                        switchTab('library');
+                                        saveBtn.textContent = 'Save Recording';
+                                        saveBtn.disabled = false;
+                                        discardBtn.click();
+                                    } else {
+                                        alert('Save failed: ' + data.message);
+                                        switchTab('record');
+                                        saveBtn.textContent = 'Save Recording';
+                                        saveBtn.disabled = false;
+                                    }
+                                } else {
+                                    alert('Save failed');
+                                    switchTab('record');
+                                    saveBtn.textContent = 'Save Recording';
+                                    saveBtn.disabled = false;
+                                }
+                                setTimeout(() => {
+                                    progressContainer.classList.add('hidden');
+                                    progressBar.style.width = '0%';
+                                }, 1000);
+                            }
+                        };
+                        xhr.open('POST', '/upload_audio', true);
+                        xhr.send(formData);
+                    });
+                };
+                reader.readAsArrayBuffer(audioBlob);
+            });
+        }
+
+        function startTimer() {
+            recordStartTime = Date.now();
+            recordTimerInterval = setInterval(() => {
+                const diff = Math.floor((Date.now() - recordStartTime) / 1000);
+                const m = Math.floor(diff / 60).toString().padStart(2, '0');
+                const s = (diff % 60).toString().padStart(2, '0');
+                document.getElementById('record-timer').textContent = `${m}:${s}`;
+            }, 1000);
         }
 
         function stopTimer() {
